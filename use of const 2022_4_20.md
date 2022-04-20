@@ -6,14 +6,14 @@
 &emsp;const变量默认仅在本文件中作用，想要实现共享的话，在头文件中定义const变量并加上extern是最好的选择。  
 
         in headfile.h: extern const a = 114514;  
-  
-## const引用
+## const与引用  
+### const引用
 &emsp;对于引用，我们也可以附加const属性，const引用禁用了修改操作，比如  
   
         int a = 1;  
         const int &b=a;&emsp;//这种情况下不能通过b来对a进行修改，尽管a是个变量。  
         
-## 对const的引用
+### 对const的引用
 &emsp;上面我们了解了const引用。那么对于const变量的引用呢？实际上，对const变量**只能**使用const引用！  
   
         const int a = 1;  
