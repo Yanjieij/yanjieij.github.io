@@ -51,7 +51,7 @@ int Cnum::convert(int n)
 		_data /= 10;
 	} while (_data);
 
-restart:									   //一旦调用了erase函数，vector尺寸就会减一，此时x、y值也有可能需要改变，所以使用goto来重新执行，以防出现溢出
+restart:  //一旦调用了erase函数，vector尺寸就会减一，此时x、y值也有可能需要改变，所以使用goto来重新执行，以防出现溢出
 	for (int x = _val.size() - 1; x >= 0; x--) //因为输入的时候是从个位开始的，所以用x--从大到小开始循环
 	{
 		for (int y = x - 1; y >= 0; y--)
