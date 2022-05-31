@@ -1,0 +1,15 @@
+﻿  Computer.cpp
+C:\Users\Yanjieij\Desktop\homework\机组课设\Project1-RunMipsInstructions\Computer.cpp(183,37): warning C4244: “+=”: 从“double”转换到“int”，可能丢失数据
+C:\Users\Yanjieij\Desktop\homework\机组课设\Project1-RunMipsInstructions\Computer.cpp(198,35): warning C4244: “+=”: 从“double”转换到“int”，可能丢失数据
+C:\Users\Yanjieij\Desktop\homework\机组课设\Project1-RunMipsInstructions\Computer.cpp(200,35): warning C4244: “+=”: 从“double”转换到“int”，可能丢失数据
+C:\Users\Yanjieij\Desktop\homework\机组课设\Project1-RunMipsInstructions\Computer.cpp(202,35): warning C4244: “+=”: 从“double”转换到“int”，可能丢失数据
+C:\Users\Yanjieij\Desktop\homework\机组课设\Project1-RunMipsInstructions\Computer.cpp(204,38): warning C4244: “+=”: 从“double”转换到“int”，可能丢失数据
+C:\Users\Yanjieij\Desktop\homework\机组课设\Project1-RunMipsInstructions\Computer.cpp(206,38): warning C4244: “+=”: 从“double”转换到“int”，可能丢失数据
+C:\Users\Yanjieij\Desktop\homework\机组课设\Project1-RunMipsInstructions\Computer.cpp(272,35): warning C4244: “+=”: 从“double”转换到“int”，可能丢失数据
+C:\Users\Yanjieij\Desktop\homework\机组课设\Project1-RunMipsInstructions\Computer.cpp(274,35): warning C4244: “+=”: 从“double”转换到“int”，可能丢失数据
+C:\Users\Yanjieij\Desktop\homework\机组课设\Project1-RunMipsInstructions\Computer.cpp(277,36): warning C4244: “+=”: 从“double”转换到“long”，可能丢失数据
+C:\Users\Yanjieij\Desktop\homework\机组课设\Project1-RunMipsInstructions\Computer.cpp(278,33): warning C4244: “-=”: 从“double”转换到“long”，可能丢失数据
+C:\Users\Yanjieij\Desktop\homework\机组课设\Project1-RunMipsInstructions\Computer.cpp(316,50): warning C4244: “+=”: 从“double”转换到“int”，可能丢失数据
+C:\Users\Yanjieij\Desktop\homework\机组课设\Project1-RunMipsInstructions\Computer.cpp(351,22): warning C4244: “=”: 从“double”转换到“long”，可能丢失数据
+C:\Users\Yanjieij\Desktop\homework\机组课设\Project1-RunMipsInstructions\Computer.cpp(369,37): warning C4244: “+=”: 从“double”转换到“long”，可能丢失数据
+  RunMipsInstructions.vcxproj -> C:\Users\Yanjieij\Desktop\homework\机组课设\Project1-RunMipsInstructions\x64\Debug\RunMipsInstructions.exe
