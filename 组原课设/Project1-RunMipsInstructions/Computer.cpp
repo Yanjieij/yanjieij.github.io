@@ -165,12 +165,9 @@ void SimMipsComputer::Simulate()
  */
 string SimMipsComputer::Disassemble(unsigned int instr, unsigned int pc)
 {
-	// Your program must exit when an unsupported instruction is detected
-	//if (/*instruction isn't supported */) exit (0); 
-
 	//将指令转化为二进制，存储在biStr中
 	int biStr[32];
-	int _temp = instr;
+	unsigned int _temp = instr;
 	for (int i = 31; i >= 0; i--)
 	{
 		biStr[i] = _temp % 2;
@@ -201,7 +198,7 @@ string SimMipsComputer::Disassemble(unsigned int instr, unsigned int pc)
 		for (int i = 20; i >= 16; i--)
 			rd += biStr[i] * pow(2, 20 - i);
 		for (int i = 25; i >= 21; i--)
-			shamt += biStr[i] * pow(2, 20 - i);
+			shamt += biStr[i] * pow(2, 25 - i);
 		for (int i = 31; i >= 26; i--)
 			funct += biStr[i] * pow(2, 31 - i);
 		//判断具体语句
@@ -239,30 +236,29 @@ string SimMipsComputer::Disassemble(unsigned int instr, unsigned int pc)
 		{
 			output.append("\t");
 			output.append("$");
-			output.push_back(rd + 48);
+			output += std::to_string(rd);
 			output.append(", $");
-			output.push_back(rt + 48);
+			output += std::to_string(rt);
 			output.append(", ");
-			output.push_back(shamt + 48);
+			output += std::to_string(shamt);
 		}
-		else if (funct == 8)
+		else if (funct == 8)	//jr
 		{
-			stringstream ss;
-			ss << hex << mipsComupter.registers[rs];
-			output.append(ss.str());
+			output.append("\t$");
+			output += std::to_string(rs);
 			break;
 		}
 		else
 		{
 			output.append("\t");
 			output.append("$");
-			output.push_back(rd + 48);
+			output += std::to_string(rd);
 			output.append(", $");
-			output.push_back(rs + 48);
+			output += std::to_string(rs);
 			output.append(", $");
-			output.push_back(rt + 48);
+			output += std::to_string(rt);
 		}
-		break;
+	break;
 	}
 	case 1: //I
 	{
@@ -275,8 +271,9 @@ string SimMipsComputer::Disassemble(unsigned int instr, unsigned int pc)
 		for (int i = 31; i >= 17; i--)
 		{
 			imm += biStr[i] * pow(2, 31 - i);
-			imm -= biStr[16] * pow(2, 15);
 		}
+		imm -= biStr[16] * pow(2, 15);
+
 		switch (opcode)
 		{
 		case 9:
@@ -297,39 +294,59 @@ string SimMipsComputer::Disassemble(unsigned int instr, unsigned int pc)
 		case 5:
 			output.append("bne");
 			break;
+		case 35:
+			output.append("lw");
+			break;
+		case 43:
+			output.append("sw");
+			break;
 		default:
 			exit(0);
 		}
-		if (opcode == 12 || opcode == 13 || opcode == 15)	//addi,ori,lui
+		if (opcode == 12 || opcode == 13 || opcode == 15)	//andi,ori,lui
 		{
 			output.append("\t");
 			output.append("$");
-			output.push_back(rt + 48);
+			output += std::to_string(rt);
 			output.append(", $");
-			output.push_back(rs + 48);
+			output += std::to_string(rs);
 			output.append(", ");
 			string hex("0x");
-			for (int x = 0; x < 4; x++)
+
+			bool zero_flag = 0;
+			for (int x = 0; x < 4; x++)		//zero_flag用于不输出前导0
+			{
+				int sum = 0;
 				for (int y = 16 + x * 4 + 3; y >= 16 + x * 4; y--)
 				{
-					int sum = 0;
 					sum += biStr[y] * pow(2, 16 + x * 4 + 3 - y);
-					if (sum >= 10)
-						hex.push_back(sum + 87);
-					else
-						hex.push_back(sum + 48);
 				}
+				if (sum == 0 && zero_flag == 0)
+					continue;
+				else
+				{
+					if (sum >= 10)
+					{
+						hex.push_back(sum + 87);
+						zero_flag = 1;
+					}
+					else
+					{
+						hex.push_back(sum + 48);
+						zero_flag = 1;
+					}
+				}
+			}
 			output.append(hex);
 		}
 		else if (opcode == 4 || opcode == 5)	//beq,bne
 		{
 			output.append("\t");
 			output.append("$");
-			output.push_back(rt + 48);
+			output += std::to_string(rs);
 			output.append(", $");
-			output.push_back(rs + 48);
-			output.append(", ");
-			stringstream ss;
+			output += std::to_string(rt);
+			output.append(", 0x");
 			/*for (int x = 0; x < 8; x++)
 				for (int y = 7 + x * 4 + 3; y >= 7 + x * 4; y--)
 				{
@@ -341,26 +358,38 @@ string SimMipsComputer::Disassemble(unsigned int instr, unsigned int pc)
 					else
 						hex.push_back(sum + 48);
 				}*/
-			long addr = pc + imm;
+			stringstream ss;
+			long addr = pc + imm * 4 + 4;
 			ss << hex << addr;
-			output.append(ss.str());
+			for (int size = ss.str().size(); size < 8; size++)
+				output += '0';
+			output += ss.str();
 		}
-		else    //addiu
+		else if (opcode == 9)   //addiu
 		{
-			if (imm < 0)	//unsigned
-				imm = pow(2, 16) + imm;
+			//if (imm < 0)	//unsigned
+			//	imm = pow(2, 16) + imm;
 			output.append("\t");
 			output.append("$");
-			output.push_back(rt + 48);
+			output += std::to_string(rt);
 			output.append(", $");
-			output.push_back(rs + 48);
+			output += std::to_string(rs);
 			output.append(", ");
-			stringstream ss;
-			ss << imm;
-			output.append(ss.str());
+			output += std::to_string(imm);
+		}
+		else //lw,sw
+		{
+			output.append("\t");
+			output.append("$");
+			output += std::to_string(rt);
+			output.append(", ");
+			output += std::to_string(imm);
+			output.append("($");
+			output += std::to_string(rs);
+			output.append(")");
 		}
 	}
-		break;
+	break;
 	case 2: //J
 	{
 		long addr = 0;
@@ -371,9 +400,9 @@ string SimMipsComputer::Disassemble(unsigned int instr, unsigned int pc)
 		switch (opcode)
 		{
 		case 2:	//j
-
 		{
-			output.append("j/t");
+			output.append("j");
+			output.append("\t");
 			stringstream ss;
 			ss << hex << addr;
 			output.append(ss.str());
@@ -381,7 +410,8 @@ string SimMipsComputer::Disassemble(unsigned int instr, unsigned int pc)
 		}
 		case 3:	//jal
 		{
-			output.append("jal/t");
+			output.append("jal");
+			output.append("\t");
 			stringstream ss;
 			ss << hex << addr;
 			output.append(ss.str());
@@ -390,6 +420,7 @@ string SimMipsComputer::Disassemble(unsigned int instr, unsigned int pc)
 		default:
 			exit(0);
 		}
+	break;
 	}
 	default: //ERROR!
 		exit(0);
@@ -415,10 +446,191 @@ string SimMipsComputer::Disassemble(unsigned int instr, unsigned int pc)
  *  updated memory location in *changedMem, otherwise return -1
  *  in *changedMem.
  */
-void SimMipsComputer::SimulateInstr(unsigned int instr, int* changedReg, int* changedMem) {
-	/* You replace this code by the right stuff. */
-	mipsComupter.pc = mipsComupter.pc + 4;
+void SimMipsComputer::SimulateInstr(unsigned int instr, int* changedReg, int* changedMem) 
+{
 	*changedReg = -1;
 	*changedMem = -1;
+	//将指令转化为二进制，存储在biStr中
+	int biStr[32];
+	unsigned int _temp = instr;
+	for (int i = 31; i >= 0; i--)
+	{
+		biStr[i] = _temp % 2;
+		_temp = _temp / 2;
+	}
+	//将机器指令进行拆分，判断种类
+	int opcode = 0;
+	int type = -1; //0 for R,1 for I,2 for J
+	for (int i = 0; i <= 5; i++)
+		opcode += biStr[5 - i] * pow(2, i);
+	if (!opcode)
+		type = 0;
+	else if (opcode == 3 || opcode == 2)
+		type = 2;
+	else
+		type = 1;
+	//根据不同类型，判断指令
+	switch (type)
+	{
+	case 0: //R
+	{
+		int rs = 0, rt = 0, rd = 0, shamt = 0, funct = 0;
+		for (int i = 10; i >= 6; i--)
+			rs += biStr[i] * pow(2, 10 - i);
+		for (int i = 15; i >= 11; i--)
+			rt += biStr[i] * pow(2, 15 - i);
+		for (int i = 20; i >= 16; i--)
+			rd += biStr[i] * pow(2, 20 - i);
+		for (int i = 25; i >= 21; i--)
+			shamt += biStr[i] * pow(2, 25 - i);
+		for (int i = 31; i >= 26; i--)
+			funct += biStr[i] * pow(2, 31 - i);
+		//判断具体语句
+		switch (funct)
+		{
+		case 33:	//addu
+		{
+			int unsigned_rs = mipsComupter.registers[rs];
+			int unsigned_rt = mipsComupter.registers[rt];
+			if (unsigned_rs < 0)
+				unsigned_rs += pow(2, 16);
+			if (unsigned_rt < 0)
+				unsigned_rt += pow(2, 16);
+			mipsComupter.registers[rd] = unsigned_rs + unsigned_rt;
+			*changedReg = rd;
+			break;
+		}
+		case 35:	//subu
+		{
+			int unsigned_rs = mipsComupter.registers[rs];
+			int unsigned_rt = mipsComupter.registers[rt];
+			if (unsigned_rs < 0)
+				unsigned_rs += pow(2, 16);
+			if (unsigned_rt < 0)
+				unsigned_rt += pow(2, 16);
+			mipsComupter.registers[rd] = unsigned_rs - unsigned_rt;
+			*changedReg = rd;
+			break;
+		}
+		case 0:		//sll
+			mipsComupter.registers[rd] = (mipsComupter.registers[rt] << shamt);
+			*changedReg = rd;
+			break;
+		case 2:		//srl
+			mipsComupter.registers[rd] = (mipsComupter.registers[rt] >> shamt);
+			*changedReg = rd;
+			break;
+		case 36:	//and
+			mipsComupter.registers[rd] = (mipsComupter.registers[rs] & mipsComupter.registers[rt]);
+			*changedReg = rd;
+			break;
+		case 37:	//or
+			mipsComupter.registers[rd] = (mipsComupter.registers[rs] | mipsComupter.registers[rt]);
+			*changedReg = rd;
+			break;
+		case 42:	//slt
+			if (mipsComupter.registers[rs] < mipsComupter.registers[rt])
+				mipsComupter.registers[rd] = 1;
+			else
+				mipsComupter.registers[rd] = 0;
+			*changedReg = rd;
+			break;
+		case 8:	//jr
+			mipsComupter.pc = mipsComupter.registers[rs] - 4;
+			break;
+		default:
+			exit(0);
+		}
+		break;
+	}
+	case 1: //I
+	{
+		int rs = 0, rt = 0;
+		unsigned int imm = 0;
+		for (int i = 10; i >= 6; i--)
+			rs += biStr[i] * pow(2, 10 - i);
+		for (int i = 15; i >= 11; i--)
+			rt += biStr[i] * pow(2, 15 - i);
+		for (int i = 31; i >= 17; i--)
+		{
+			imm += biStr[i] * pow(2, 31 - i);
+		}
+		imm -= biStr[16] * pow(2, 15);
+
+		switch (opcode)
+		{
+		case 9:		//addiu
+			if (imm < 0)
+				imm += pow(2, 16);
+			mipsComupter.registers[rt] = (mipsComupter.registers[rs] + imm);
+			*changedReg = rt;
+			break;
+		case 12:	//andi
+			mipsComupter.registers[rt] = (signed)(mipsComupter.registers[rs] & imm);
+			*changedReg = rt;
+			break;
+		case 13:	//ori
+			mipsComupter.registers[rt] = (signed)(mipsComupter.registers[rs] | imm);
+			*changedReg = rt;
+			break;
+		case 15:	//lui
+			mipsComupter.registers[rt] = imm * 65536;
+			*changedReg = rt;
+			break;
+		case 4:		//beq
+			if (mipsComupter.registers[rs] == mipsComupter.registers[rt])
+				mipsComupter.pc += imm * 4;
+		case 5:		//bne
+			if (mipsComupter.registers[rs] != mipsComupter.registers[rt])
+				mipsComupter.pc += imm * 4;
+			break;
+		case 35:	//lw
+			mipsComupter.registers[rt] = GetMemoryContents(mipsComupter.registers[rs] + imm);
+			*changedReg = rt;
+			break;
+		case 43:	//sw
+		{
+			int addr = mipsComupter.registers[rs] + (int)imm;
+			int index = (addr - 0x00400000) / 4;
+			mipsComupter.memory[index] = mipsComupter.registers[rt];
+			*changedMem = mipsComupter.registers[rs] + imm;
+			break;
+		}
+		default:
+			exit(0);
+		}
+		break;
+	}
+	case 2: //J
+	{
+		long addr = 0;
+		for (int i = 31; i >= 7; i--)
+		{
+			addr += biStr[i] * pow(2, 31 - i);
+		}
+		switch (opcode)
+		{
+		case 2:	//j
+		{
+			mipsComupter.pc = addr*4 - 4;
+			break;
+		}
+		case 3:	//jal
+		{
+			mipsComupter.registers[31] = mipsComupter.pc + 4;
+			mipsComupter.pc = addr*4 - 4;
+			break;
+		}
+		default:
+			exit(0);
+		}
+		break;
+	}
+	default: //ERROR!
+		exit(0);
+	}
+	if (*changedReg == 0)
+		*changedReg = -1;
+	mipsComupter.pc = mipsComupter.pc + 4;
 }
 
