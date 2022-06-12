@@ -1,6 +1,8 @@
 ﻿#include"pch.h"
 #include<math.h>
 #include"paint.h"
+#include"Calculate.h"
+//-----------------------------------点部分--------------------------------------//
 //画点
 void DrawPnt(CClientDC* dc, PNT_STRU point)
 {
@@ -67,15 +69,61 @@ void DrawPnt(CClientDC* dc, PNT_STRU point)
 	dc->SelectObject(oldObject);
 	}
 }
-
 //显示所有点
-void ShowAllPnt(CClientDC* de, CFile* pntTmpF, int pntNum)
+void ShowAllPnt(CClientDC* dc, CFile* pntTmpF, int pntNum)
 {
 	PNT_STRU point;
 	for (int i = 0; i < pntNum; ++i)
 	{
 		ReadTempFileToPnt(pntTmpF, i, point);	//读点
 		if (point.isDel == 0)
-			DrawPnt(de, point);					//绘制点
+			DrawPnt(dc, point);					//绘制点
+	}
+}
+
+//------------------------------------线部分----------------------------------------//
+//构造线段
+void DrawSeg(CClientDC* dc, LIN_NDX_STRU line, POINT point1, POINT point2)
+{
+	CPen pen;
+	switch (line.pattern)
+	{
+	case 0: //实线
+		pen.CreatePen(PS_SOLID, 1, line.color); //BIH!-1-gl;;􀀜i'.t-J @i 􀀾
+		break;
+	case 1://虚线
+		pen.CreatePen(PS_DASH, 1, line.color); //BIJ􀁠--t- J;t􀀜i'.t-J @1 􀀾
+		break;
+	case 2: //点线
+		pen.CreatePen(PS_DOT, 1, line.color); //BIJ􀁠-1- ,B􀀜tfl @i 􀀾
+		break;
+	default:
+		break;
+	}
+	CPen* oldPen = dc->SelectObject(&pen);
+	dc->MoveTo(point1.x, point1.y); //开始画线
+	dc->LineTo(point2.x, point2.y); //移动画线
+	dc->SelectObject(oldPen);
+}
+
+//显示所有线
+void ShowAllLin(CClientDC* dc, CFile* LinTmpNdxF, CFile* LinTmpDatF, int LinNum)
+{
+	LIN_NDX_STRU line;
+	for (int i = 0; i < LinNum; i++)
+	{
+		ReadTempFileToLinNdx(LinTmpNdxF, i, line);
+		if (line.isDel)
+			continue;
+		D_DOT dotl, dot2;
+		POINT pntl, pnt2;
+		for (int j = 0; j < line.dotNum - 1; j++)
+		{
+			ReadTempFileToLinDat(LinTmpDatF, line.datOff, j, dotl);
+			ReadTempFileToLinDat(LinTmpDatF, line.datOff, j + 1, dot2);
+			DotToPnt(pntl, dotl);
+			DotToPnt(pnt2, dot2);
+			DrawSeg(dc, line, pntl, pnt2);
+		}
 	}
 }
