@@ -15,6 +15,9 @@
 #include"paint.h"
 #include"WriteOrRead.h"
 #include"Calculate.h"
+#include"CPointParameterDlg.h"
+#include"CLineParameterDlg.h"
+#include"CRegionParameterDlg.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -22,16 +25,26 @@
 //-----------------------信息的全局变量
 VERSION GPntVer = { 'P','N','T',10 };
 VERSION GLinVer = { 'L','I','N',10 };
+VERSION GRegVer = { 'R','E','G',10 };
 //-----------------------点数据的全局变量
 bool GPntFCreated = false;							//临时文件是否创建
 CString GPntFName;									//永久文件名
-CString GPntTmpFName = CString("tempPntF.dat");	//临时文件名
+CString GPntTmpFName = CString("tempPntF.dat");		//临时文件名
 bool GPntChanged = false;							//是否更改
 int GPntNum = 0;									//物理数
 int GPntLNum = 0;									//逻辑数
+PNT_STRU GPnt = { 0,0,RGB(0,0,0),0,0 };				//默认点参数
 CFile* GPntTmpF = new CFile();						//读取临时文件指针对象
 int GPntNdx = -1;									//找到的点位于文件中的位置
 PNT_STRU GTPnt;										//临时点，储存找到的点数据
+CString getPntNum()
+{
+	CString output = _T("点：");
+	CString first, second;
+	first.Format(_T("%d"), GPntLNum);
+	second.Format(_T("%d"), GPntNum);
+	return output + first + '/' + second;
+}
 //-----------------------线数据的全局变量
 bool GLinFCreated = false;							//临时文件是否创建
 CString GLinFName;									//永久文件名
@@ -40,6 +53,11 @@ CString GLinTmpDatFName = CString("tempLinF.dat");	//临时数据文件名
 bool GLinChanged = false;							//是否更改
 int GLinNum = 0;									//物理数
 int GLinLNum = 0;									//逻辑数
+LIN_NDX_STRU GLin = { GLin.isDel = 0, GLin.color = RGB(0, 0, 0), GLin.pattern = 0,GLin.dotNum = 0, GLin.datOff = 0 };
+													//默认线参数
+LIN_NDX_STRU GTLin;									//线
+POINT GLPnt = { GLPnt.x = -1, GLPnt.y = -1 };		//线段起点
+CPoint GMPnt(-1, -1);								//鼠标上一状态的点
 CFile* GLinTmpDatF = new CFile();					//读取临时数据文件指针对象
 CFile* GLinTmpNdxF = new CFile();					//读取临时索引文件指针对象
 int GLinNdx = -1;									//找到线位于文件中的位置
@@ -48,6 +66,17 @@ CPoint GLinMMPnt(-1, -1);							//记录鼠标移动的上一状态，用于擦�
 long GLinMMOffsetX = 0;								//X轴偏移量
 long GLinMMOffsetY = 0;								//Y轴偏移量
 LIN_NDX_STRU GLinMMTmpNdx;							//记录选中的线的索引
+int order = -1;										//延长线时选中线的端点
+LIN_NDX_STRU GLinToAdd = GLin;						//需要延长的线
+int GnPick = -1;									//延长线的序列
+CString getLinNum()
+{
+	CString output = _T("线：");
+	CString first, second;
+	first.Format(_T("%d"), GLinLNum);
+	second.Format(_T("%d"), GLinNum);
+	return output + first + '/' + second;
+}
 //-----------------------区数据的全局变量
 bool GRegFCreated = false;							//临时文件是否创建
 CString GRegFName;									//永久文件名
@@ -58,6 +87,26 @@ int GRegNum = 0;									//物理数
 int GRegLNum = 0;									//逻辑数
 CFile* GRegTmpDatF = new CFile();					//读取临时数据文件指针对象
 CFile* GRegTmpNdxF = new CFile();					//读取临时索引文件指针对象
+CPoint GRegCreateMMPnt(-1, -1);						//鼠标移动前一状态点
+CPoint GRegCreateStartPnt(-1, -1);					//造区的起点
+													//索引结构
+REG_NDX_STRU GReg = { GReg.isDel = 0,GReg.color = RGB(0,0,0),GReg.pattern = 0,GReg.dotNum = 0,GReg.datOff = 0 };
+REG_NDX_STRU GTReg;
+int GRegNdx = -1;									//区位于文件中的位置
+REG_NDX_STRU GRegMMTmpNdx;							//选中区的索引
+CPoint GRegLBDPnt(-1, -1);							//左键按下的位置
+CPoint GRegMMPnt(-1, -1);							//记录上一状态，进行擦除
+long GRegMMOffsetX = 0;								//x轴偏移量
+long GRegMMOffsetY = 0;								//y轴偏移量
+CString getRegNum()
+{
+	CString output = _T("区：");
+	CString first, second;
+	first.Format(_T("%d"), GRegLNum);
+	second.Format(_T("%d"), GRegNum);
+	return output + first + '/' + second;
+}
+
 //-----------------------与操作相关
 enum Action {
 	Noaction,
@@ -70,8 +119,7 @@ enum Action {
 	OPERSTATE_INPUT_REG,
 	OPERSTATE_DELETE_REG,
 	OPERSTATE_MOVE_REG,
-	OPERSTATE_ZOOM_IN,
-	OPERSTATE_ZOOM_OUT,
+	OPERSTATE_ZOOM,
 	OPERSTATE_WINDOW_MOVE,
 	OPERSTATE_LIN_DELETE_PNT,
 	OPERSTATE_LIN_ADD_PNT,
@@ -81,18 +129,46 @@ enum Action {
 	OPERSTATE_MODIFY_REGION_PARAMETER,
 	OPERSTATE_UNDELETE_PNT,
 	OPERSTATE_UNDELETE_LIN,
-	OPERSTATE_UNDELETE_REG
+	OPERSTATE_UNDELETE_REG,
+	OPERSTATE_LIN_DELETE_DOT,
+	OPERSTATE_LIN_ADD_DOT
 };//枚举操作状态
 Action GCurOperState;//操作参数
-//--------------------------默认点的结构------------------------------//
-PNT_STRU GPnt = { 0,0,RGB(0,0,0),0,0 };//默认点参数
-//--------------------------默认线的结构------------------------------//
-LIN_NDX_STRU GLin = { GLin.isDel = 0, GLin.color = RGB(0, 0, 0), GLin.pattern = 0,GLin.dotNum = 0, GLin.datOff = 0 };
-												//默认线参数
-LIN_NDX_STRU GTLin;								//线
-POINT GLPnt = { GLPnt.x = -1, GLPnt.y = -1 };	//线段起点
-CPoint GMPnt(-1, -1);							//鼠标上一状态的点
-																			
+//----------------------------用于放大缩小---------------------------//
+zoomData zoom = { (-1,-1),(-1,-1),0,0,1.0,0 };
+CPoint GZoomLBDPnt(-1, -1);			//放大时左键的点
+CPoint GZoomMMPnt(-1, -1);			//放大前一状态
+double GZoomOffset_x = 0;			//偏移向量
+double GZoomOffset_y = 0;	
+double GZoom = 1.0;					//缩放系数
+int GZoomStyle = 0;					//放大方式
+//---------------------------窗口移动----------------------------//
+CPoint GWinMoveLBDPnt(-1, -1);		//移动时左键按下的点
+CPoint GWinMoveMMPnt(-1, -1);		//鼠标移动前状态
+									//外包矩形的顶点坐标
+double GMaxX = 0;
+double GMaxY = 0;
+double GMinX = 0;
+double GMinY = 0;
+//----------------------------连接线-----------------------------//
+LIN_NDX_STRU GStartLin = GLin;		//选中的第一条线
+int GnStart = -1;
+LIN_NDX_STRU GEndLin = GLin;		//选中的第二条线
+int GnEnd = -1;
+int GnLine = 0;
+D_DOT firstPoint = { 0,0 };			//选择的第一个点
+D_DOT secondPoint = { 0,0 };		//选择的第二个点
+int order1 = -1;					//所选择点的顺序，0代表在开头，1代表在结尾
+int order2 = -1;
+bool isPick = 0;
+
+//---------------------------窗口显示---------------------------//
+enum State{ SHOWSTATE_UNDEL, SHOWSTATE_DEL };
+State GCurShowState = SHOWSTATE_UNDEL;		//默认显示非删除状态
+bool GShowPnt = true;
+bool GShowLin = true;
+bool GShowReg = true; 
+
 // CMapEditorView
 
 IMPLEMENT_DYNCREATE(CMapEditorView, CView)
@@ -100,7 +176,6 @@ IMPLEMENT_DYNCREATE(CMapEditorView, CView)
 BEGIN_MESSAGE_MAP(CMapEditorView, CView)
 	ON_WM_CONTEXTMENU()
 	ON_WM_RBUTTONUP()
-	ON_COMMAND(ID_WINDOW_ZOOM_IN, &CMapEditorView::OnWindowZoomIn)
 	ON_COMMAND(ID_FILE_NEW, &CMapEditorView::OnFileNew)
 	ON_COMMAND(ID_FILE_OPEN_POINT, &CMapEditorView::OnFileOpenPoint)
 	ON_COMMAND(ID_FILE_OPEN_LINE, &CMapEditorView::OnFileOpenLine)
@@ -112,7 +187,6 @@ BEGIN_MESSAGE_MAP(CMapEditorView, CView)
 	ON_COMMAND(ID_FILE_SAVE_AS_LINE, &CMapEditorView::OnFileSaveAsLine)
 	ON_COMMAND(ID_FILE_SAVE_AS_REGION, &CMapEditorView::OnFileSaveAsRegion)
 	ON_COMMAND(ID_APP_EXIT, &CMapEditorView::OnAppExit)
-	ON_COMMAND(ID_WINDOW_ZOOM_OUT, &CMapEditorView::OnWindowZoomOut)
 	ON_COMMAND(ID_WINDOW_MOVE, &CMapEditorView::OnWindowMove)
 	ON_COMMAND(ID_WINDOW_RESET, &CMapEditorView::OnWindowReset)
 	ON_COMMAND(ID_WINDOW_SHOW_POINT, &CMapEditorView::OnWindowShowPoint)
@@ -146,7 +220,16 @@ BEGIN_MESSAGE_MAP(CMapEditorView, CView)
 	ON_WM_LBUTTONDOWN()
 	ON_WM_DESTROY()
 	ON_WM_MOUSEMOVE()
+	ON_COMMAND(ID_WINDOW_ZOOM, &CMapEditorView::OnWindowZoom)
+	ON_UPDATE_COMMAND_UI(ID_WINDOW_SHOW_POINT, &CMapEditorView::OnUpdateWindowShowPoint)
+	ON_UPDATE_COMMAND_UI(ID_WINDOW_SHOW_LINE, &CMapEditorView::OnUpdateWindowShowLine)
+	ON_UPDATE_COMMAND_UI(ID_WINDOW_SHOW_REGION, &CMapEditorView::OnUpdateWindowShowRegion)
+	ON_UPDATE_COMMAND_UI(ID_POINT_SHOW_DELETED, &CMapEditorView::OnUpdatePointShowDeleted)
+	ON_UPDATE_COMMAND_UI(ID_LINE_SHOW_DELETED, &CMapEditorView::OnUpdateLineShowDeleted)
+	ON_UPDATE_COMMAND_UI(ID_REGION_SHOW_DELETED, &CMapEditorView::OnUpdateRegionShowDeleted)
 END_MESSAGE_MAP()
+
+
 
 // CMapEditorView 构造/析构
 
@@ -181,12 +264,15 @@ void CMapEditorView::OnDraw(CDC* /*pDC*/)
 	GetClientRect(&myrect);
 	CClientDC dc(this);
 	dc.FillSolidRect(0, 0, myrect.Width(), myrect.Height(), dc.GetBkColor());
-
 	dc.SetROP2(R2_NOTXORPEN);
-	ShowAllPnt(&dc, GPntTmpF, GPntNum);
-	ShowAllLin(&dc, GLinTmpNdxF, GLinTmpDatF, GLinNum);
+
+	if (GShowPnt)
+		ShowAllPnt(&dc, GPntTmpF, GPntNum, GZoomOffset_x, GZoomOffset_y, GZoom, GCurShowState);
+	if (GShowLin)
+		ShowAllLin(&dc, GLinTmpNdxF, GLinTmpDatF, GLinNum, GZoomOffset_x, GZoomOffset_y, GZoom, GCurShowState);
+	if (GShowReg)
+		ShowAllReg(&dc, GRegTmpNdxF, GRegTmpDatF, GRegNum, GZoomOffset_x, GZoomOffset_y, GZoom, GCurShowState);
 	ReleaseDC(&dc);
-	// TODO: 在此处为本机数据添加绘制代码
 }
 
 void CMapEditorView::OnRButtonUp(UINT /* nFlags */, CPoint point)
@@ -222,6 +308,86 @@ void CMapEditorView::OnRButtonUp(UINT /* nFlags */, CPoint point)
 			break;
 		}
 	}
+
+	//------------------------缩放-----------------------------//
+	if (GPntFCreated || GLinFCreated || GRegFCreated)
+	{
+		RECT client;
+		double zoom = 1.0;
+		switch (GCurOperState)
+		{
+		case OPERSTATE_ZOOM:	//缩小
+		{
+			GetClientRect(&client);
+			double x0 = point.x - (client.right / 2.0) - (client.right / 8.0);
+			double y0 = point.y - (client.bottom / 2.0) - (client.bottom / 8.0);
+			GZoomOffset_x += (x0 / GZoom);
+			GZoomOffset_y += (y0 / GZoom);
+			GZoom *= 3 / 4.0;
+			this->Invalidate();
+			break;
+		}
+		default:
+			break;
+		}
+	}
+
+	//--------------------------造区-----------------------------//
+	if (GRegFCreated)
+		switch (GCurOperState)
+		{
+		case OPERSTATE_INPUT_REG:
+			if (GTReg.dotNum > 2)
+			{
+				WriteRegNdxToFile(GRegTmpNdxF, GRegNum, GTReg);
+				++GRegNum;
+				++GRegLNum;
+				POINT* pt = new POINT[3];
+				D_DOT dot;
+				ReadTempFileToRegDat(GRegTmpDatF, GTReg.datOff, 0, dot);
+				PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+				DotToPnt(pt[0], dot);
+				ReadTempFileToRegDat(GRegTmpDatF, GTReg.datOff, GTReg.dotNum - 1, dot);
+				PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+				DotToPnt(pt[1], dot);
+				pt[2] = point;
+				DrawReg(&dc, GTReg, pt, 3);
+				delete[] pt;
+				GReg.datOff += (GTReg.dotNum * sizeof(D_DOT));
+				memset(&GTReg, 0, sizeof(REG_NDX_STRU));
+				GRegCreateMMPnt = CPoint(-1, -1);
+				GRegCreateStartPnt = CPoint(-1, -1);
+			}
+			else if (GTReg.dotNum == 2)
+			{
+				POINT* pt = new POINT[3];
+				D_DOT dot;
+				ReadTempFileToRegDat(GRegTmpDatF, GTReg.datOff, 0, dot);
+				PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+				DotToPnt(pt[0], dot);
+				ReadTempFileToRegDat(GRegTmpDatF, GTReg.datOff,
+					GTReg.dotNum - 1, dot);
+				PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+				DotToPnt(pt[1], dot);
+				pt[2] = point;
+				DrawReg(&dc, GTReg, pt, 3);
+				delete[] pt;
+				memset(&GTReg, 0, sizeof(REG_NDX_STRU));
+				GRegCreateMMPnt = CPoint(-1, -1);
+				GRegCreateStartPnt = CPoint(-1, -1);
+			}
+			else if (GTReg.dotNum == 1)
+			{
+				LIN_NDX_STRU tln = { tln.pattern = GTReg.pattern, tln.color = GTReg.color };
+				DrawSeg(&dc, tln, GRegCreateStartPnt, GRegCreateMMPnt);
+				memset(&GTReg, 0, sizeof(REG_NDX_STRU));
+				GRegCreateMMPnt = CPoint(-1, -1);
+				GRegCreateStartPnt = CPoint(-1, -1);
+			}
+			break;
+		default:
+			break;
+		}
 }
 
 void CMapEditorView::OnContextMenu(CWnd* /* pWnd */, CPoint point)
@@ -445,7 +611,72 @@ void CMapEditorView::OnFileOpenLine()
 void CMapEditorView::OnFileOpenRegion()
 {
 	// TODO: 在此添加命令处理程序代码
+	CFileDialog dlg(true);
+	dlg.m_ofn.lpstrFilter = L"reg\0* .reg";
+	if (GRegChanged == true)
+	{
+		if (IDYES == AfxMessageBox(L"文件还没有保存，要先保存吗 ", MB_YESNO, MB_ICONQUESTION))
+		{
+			OnFileSaveRegion();
+		}
+	}
+	if (dlg.DoModal() == IDOK)
+	{
+		GRegFCreated = false;
+		int IsCreate = 0;
+		GRegFName = dlg.m_ofn.lpstrFile;
+		CFile* RegF = new CFile();
+		if (!RegF->Open(GRegFName, CFile::modeRead | CFile::typeBinary))
+		{
+			TRACE(_T("无法打开文件 \n"));
+			return;
+		}
+		int nPos = GRegFName.ReverseFind(_T('\\'));
+		CString floderAdd = GRegFName.Left(nPos);
+		if (GRegTmpDatFName != "tempRegF.dat")
+		{
+			GRegTmpDatF->SeekToBegin();
+			++IsCreate;
+		}
+		else
+		{
+			GRegTmpDatFName = floderAdd + CString("\\") + GRegTmpDatFName;
+			if (!GRegTmpDatF->Open(GRegTmpDatFName, CFile::modeCreate | CFile::modeReadWrite | CFile::typeBinary))
+			{
+				GRegTmpDatFName = CString("tempRegF.dat");
+				TRACE(_T("无法打开文件 \n"));
+			}
+			else
+				++IsCreate;
+		}
+		if (GRegTmpNdxFName != "tempRegF.ndx")
+		{
+			GRegTmpNdxF->SeekToBegin();
+			++IsCreate;
+		}
+		else
+		{
+			GRegTmpNdxFName = floderAdd + CString("\\") + GRegTmpNdxFName;
+			if (!GRegTmpNdxF->Open(GRegTmpNdxFName, CFile::modeCreate | CFile::modeReadWrite | CFile::typeBinary))
+			{
+				GRegTmpNdxFName = CString("tempRegF.ndx");
+				TRACE(_T("无法打开文件 \n"));
+			}
+			else
+				++IsCreate;
+		}
+		if (2 == IsCreate)
+			GRegFCreated = true;
+		ReadRegPermanentFileToTemp(RegF, GRegTmpDatF, GRegTmpNdxF, GRegVer, GRegNum, GRegLNum, GReg.datOff);
+		RegF->Close();
+		delete RegF;
+		CString windowText = dlg.GetFileName() + "-MapEditor";
+		GetParent()->SetWindowTextW(windowText);
+		this->InvalidateRect(NULL); //重绘窗口显示
+		GCurOperState = Noaction;
+	}
 }
+
 
 
 void CMapEditorView::OnFileSavePoint()
@@ -524,7 +755,7 @@ void CMapEditorView::OnFileSaveLine()
 		}
 		if (!LinF->Open(GLinFName, CFile::modeCreate | CFile::modeWrite | CFile::typeBinary))
 		{
-			TRACE(_T("File could not be opened \n"));
+			TRACE(_T("无法打开文件 \n"));
 			return;
 		}
 		//写入永久文件
@@ -539,7 +770,7 @@ void CMapEditorView::OnFileSaveLine()
 	}
 	else
 	{
-		MessageBox(L"File have not been created.", L"Message", MB_OK);
+		MessageBox(L"还没有创建文件", L"提示", MB_OK);
 	}
 	GCurOperState = Noaction;
 }
@@ -548,7 +779,51 @@ void CMapEditorView::OnFileSaveLine()
 void CMapEditorView::OnFileSaveRegion()
 {
 	// TODO: 在此添加命令处理程序代码
+	if (GRegFCreated)
+	{ //已经存在临时文件
+		CFile* RegF = new CFile();
+		if (GRegFName.IsEmpty())
+		{
+			LPCTSTR lpszFilters;
+			lpszFilters = _T("区(*.reg)|*.reg||");
+			CFileDialog dlg(false, _T("reg"), NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, lpszFilters);//保存区的对话框
+			int nPos = GRegTmpDatFName.ReverseFind(_T('\\'));
+			CString folderAdd = GRegTmpDatFName.Left(nPos);
+			dlg.m_ofn.lpstrInitialDir = folderAdd;
+			if (dlg.DoModal() == IDOK)
+			{
+				GRegFName = dlg.GetPathName(); //区文件的名称
+			}
+			else
+			{
+				return;
+			}
+		}
+		else
+		{
+			RegF->Remove(GRegFName);
+		}
+		if (!RegF->Open(GRegFName, CFile::modeCreate | CFile::modeWrite | CFile::typeBinary))
+		{
+			TRACE(_T("无法打开文件 \n"));
+			return;
+		}
+		WriteTempToRegPermanentFile(RegF, GRegTmpDatF, GRegTmpNdxF, GRegVer, GRegNum, GRegLNum);//将区的索引和点数据写入永久文件
+		RegF->Close();
+		delete RegF;
+		GRegChanged = false;//线数据无变更
+		int nPos = GRegFName.ReverseFind(_T('\\'));
+		CString windowText = GRegFName.Right(GRegFName.GetLength() - nPos - 1) + " -MapEditor";
+		GetParent()->SetWindowTextW(windowText);
+	}
+	else
+	{
+		MessageBox(L"还没有创建文件！", L"提示", MB_OK);
+	}
+	GCurOperState = Noaction;
 }
+
+
 
 
 void CMapEditorView::OnFileSaveAsPoint()
@@ -560,19 +835,28 @@ void CMapEditorView::OnFileSaveAsPoint()
 	//若另存失败，还原文件名
 	if (GPntFName == "")
 		GPntFName = tempFName;
-	// TODO: 在此添加命令处理程序代码
 }
 
 
 void CMapEditorView::OnFileSaveAsLine()
 {
-	// TODO: 在此添加命令处理程序代码
+	//暂存文件名
+	CString tempFName = GLinFName;
+	GLinFName = CString("");
+	OnFileSaveLine();
+	//若另存失败，还原文件名
+	if (GLinFName == "")
+		GLinFName = tempFName;
 }
 
 
 void CMapEditorView::OnFileSaveAsRegion()
 {
-	
+	CString tempFName = GRegFName; //保留原点永久文件名
+	GRegFName = CString("");
+	OnFileSaveRegion(); 
+	if (GRegFName == "") //若另存失败 ，则还原原永久文件名
+		GRegFName = tempFName;
 }
 
 //退出程序
@@ -588,54 +872,324 @@ void CMapEditorView::OnAppExit()
 	GetParent()->DestroyWindow();
 }
 
-void CMapEditorView::OnWindowZoomIn()
+//放大/缩小
+void CMapEditorView::OnWindowZoom()
 {
-	// TODO: 在此添加命令处理程序代码
-}
-
-void CMapEditorView::OnWindowZoomOut()
-{
-	// TODO: 在此添加命令处理程序代码
+	if (GPntFCreated || GLinFCreated || GRegFCreated)
+		GCurOperState = OPERSTATE_ZOOM;
+	else
+		MessageBox(L"还没有创建临时文件！", L"提示", MB_OK);
 }
 
 
 void CMapEditorView::OnWindowMove()
 {
-	// TODO: 在此添加命令处理程序代码
+	if (GPntFCreated || GLinFCreated || GRegFCreated)
+		GCurOperState = OPERSTATE_WINDOW_MOVE;
+	else
+		MessageBox(L"还没有创建临时文件！", L"提示", MB_OK);
 }
 
 
 void CMapEditorView::OnWindowReset()
 {
-	// TODO: 在此添加命令处理程序代码
+	GCurShowState = SHOWSTATE_UNDEL;
+	this->Invalidate();
+	GShowPnt = true;
+	GShowReg = true;
+	GShowLin = true;
+
+	//重置偏移量和放大倍数
+	GZoomOffset_x = 0;
+	GZoomOffset_y = 0;
+	GZoom = 1.0;
+	//遍历点、线、区的点数据
+	D_DOT tempPt;
+	PNT_STRU tempPnt;
+	LIN_NDX_STRU tempLin;
+	REG_NDX_STRU tempReg;
+	bool isInit = false;
+	if (GPntLNum == 0 && GLinLNum == 0 && GRegLNum == 0)
+		return;
+	if (isInit == false & &GPntLNum > 0)
+	{
+		for (int i = 0; i < GPntNum; ++i)
+		{
+			ReadTempFileToPnt(GPntTmpF, i, tempPnt);
+			if (tempPnt.isDel)
+				continue;
+			else
+			{
+				GMaxX = tempPnt.x;
+				GMinX = tempPnt.x;
+				GMaxY = tempPnt.y;
+				GMinY = tempPnt.y;
+				isInit = true;
+				break;
+			}
+		}
+	}
+	if (isInit == false && GLinLNum > 0)
+	{
+		for (int i = 0; i < GLinNum; ++i)
+		{
+			ReadTempFileToLinNdx(GLinTmpNdxF, i, tempLin);
+			if (tempLin.isDel)
+				continue;
+			else
+			{
+				for (int j = 0; j < tempLin.dotNum; ++j)
+					ReadTempFileToLinDat(GLinTmpDatF, tempLin.datOff, j, tempPt);
+				GMaxX = tempPt.x;
+				GMinX = tempPt.x;
+				GMaxY = tempPt.y;
+				GMinY = tempPt.y;
+				isInit = true;
+				break;
+			}
+		}
+	}
+	if (isInit == false && GRegLNum > 0)
+	{
+		for (int i = 0; i < GRegNum; ++i)
+		{
+			ReadTempFileToRegNdx(GRegTmpNdxF, i, tempReg);
+			if (tempReg.isDel)
+				continue;
+			else
+			{
+				for (int j = 0; j < tempReg.dotNum; ++j)
+				{
+					ReadTempFileToRegDat(GRegTmpDatF, tempReg.datOff, j, tempPt);
+					GMaxX; tempPt.x;
+					GMinX; tempPt.x;
+					GMaxY; tempPt.y;
+					GMinY; tempPt.y;
+					isInit == true;
+					break;
+				}
+			}
+		}
+	}
+	if (isInit == false)
+	{
+		this->Invalidate();
+		return;
+	}
+	if (GPntFCreated)
+	{
+		for (int i=0; i < GPntNum; ++i)
+		{
+			ReadTempFileToPnt(GPntTmpF, i, tempPnt);
+			if (tempPnt.isDel)
+				continue;
+			else
+			{
+				if (tempPnt.x > GMaxX)
+					GMaxX; tempPnt.x;
+				if (tempPnt.y > GMaxY)
+					GMaxY; tempPnt.y;
+				if (tempPnt.x < GMinX)
+					GMinX; tempPnt.x;
+				if (tempPnt.y < GMinY)
+					GMinY; tempPnt.y;
+			}
+		}
+	}
+	if (GLinFCreated)
+	{
+		for (int i = 0; i < GLinNum; ++i)
+		{
+			ReadTempFileToLinNdx(GLinTmpNdxF, i, tempLin);
+			if (tempLin.isDel)
+				continue;
+			else
+			{
+				for (int j = 0; j < tempLin.dotNum; ++j)
+				{
+					ReadTempFileToLinDat(GLinTmpDatF, tempLin.datOff, j, tempPt);
+					if (tempPt.x > GMaxX)
+						GMaxX = tempPt.x;
+					if (tempPt.y > GMaxY)
+						GMaxY = tempPt.y;
+					if (tempPt.x < GMinX)
+						GMinX = tempPt.x;
+					if (tempPt.y < GMinY)
+						GMinY = tempPt.y;
+				}
+			}
+		}
+	}
+	if (GRegFCreated)
+	{
+		for (int i = 0; i < GRegLNum; ++i)
+		{
+			ReadTempFileToRegNdx(GRegTmpNdxF, i, tempReg);
+			if (tempReg.isDel)
+				continue;
+			else
+			{
+				for (int j = 0; j < tempReg.dotNum; ++j)
+				{
+					ReadTempFileToRegDat(GRegTmpDatF, tempReg.datOff, j, tempPt);
+					if (tempPt.x > GMaxX)
+						GMaxX = tempPt.x;
+					if (tempPt.y > GMaxY)
+						GMaxY = tempPt.y;
+					if (tempPt.x < GMinX)
+						GMinX = tempPt.x;
+				}
+			}
+		}
+	}
+	GMaxX += 20;
+	GMinX -= 20;
+	GMaxY += 20;
+	GMinY -= 20;
+	RECT rect, client;
+	if (tempPt.y < GMinY)
+	GMinY = tempPt.y;
+	double zoom;
+	GetClientRect(&client);
+	rect.right = (long)GMaxX;
+	rect.left = (long)GMinX;
+	rect.bottom = (long)GMaxY;
+	rect.top = (long)GMinY;
+	modulusZoom(client, rect, zoom);
+	GMaxX += 20 / zoom;
+	GMinX -= 20 / zoom;
+	GMaxY += 20 / zoom;
+	GMinY -= 20 / zoom;
+	rect.right = (long)GMaxX;
+	rect.left = (long)GMinX;
+	rect.bottom = (long)GMaxY;
+	rect.top = (long)GMinY;
+	modulusZoom(client, rect, zoom);
+	double x0 = GetCenter(rect).x - (client.right / 2.0) + (client.right * (zoom - 1) / (2.0 * zoom));
+	double y0 = GetCenter(rect).y - (client.bottom / 2.0) + (client.bottom * (zoom - 1) / (2.0 * zoom));
+	GZoomOffset_x += (x0 / GZoom);
+	GZoomOffset_y += (y0 / GZoom);
+	GZoom *= zoom;
+	GCurOperState = Noaction;
+	this->Invalidate();
 }
 
 
 void CMapEditorView::OnWindowShowPoint()
 {
-	// TODO: 在此添加命令处理程序代码
+	if (GCurShowState == SHOWSTATE_DEL)
+	{
+		GShowPnt = false;
+		GShowLin = false;
+		GShowReg = false;
+	}
+	GCurShowState = SHOWSTATE_UNDEL;
+	//若已经显示点，则关闭
+	if (GShowPnt == true)
+		GShowPnt = false;
+	else
+		GShowPnt = true;
+	this->InvalidateRect(NULL);
 }
 
+void CMapEditorView::OnUpdateWindowShowPoint(CCmdUI* pCmdUI)
+{
+	if (GCurShowState == SHOWSTATE_UNDEL && GShowPnt == true)
+		pCmdUI->SetCheck(1);
+	else
+		pCmdUI->SetCheck(0);
+}
+
+void CMapEditorView::OnUpdatePointShowDeleted(CCmdUI* pCmdUI)
+{
+	if (GCurShowState == SHOWSTATE_DEL && GShowPnt == true)
+		pCmdUI->SetCheck(1);
+	else
+		pCmdUI->SetCheck(0);
+}
 
 void CMapEditorView::OnWindowShowLine()
 {
-	// TODO: 在此添加命令处理程序代码
+	if (GCurShowState == SHOWSTATE_DEL)
+	{
+		GShowPnt = false;
+		GShowLin = false;
+		GShowReg = false;
+	}
+	GCurShowState = SHOWSTATE_UNDEL;
+	//若已经显示点，则关闭
+	if (GShowLin == true)
+		GShowLin = false;
+	else
+		GShowLin = true;
+	this->InvalidateRect(NULL);
+}
+
+
+void CMapEditorView::OnUpdateWindowShowLine(CCmdUI* pCmdUI)
+{
+	if (GCurShowState == SHOWSTATE_UNDEL && GShowLin == true)
+		pCmdUI->SetCheck(1);
+	else
+		pCmdUI->SetCheck(0);
+}
+
+
+void CMapEditorView::OnUpdateLineShowDeleted(CCmdUI* pCmdUI)
+{
+	if (GCurShowState == SHOWSTATE_DEL && GShowLin == true)
+		pCmdUI->SetCheck(1);
+	else
+		pCmdUI->SetCheck(0);
 }
 
 
 void CMapEditorView::OnWindowShowRegion()
 {
-	// TODO: 在此添加命令处理程序代码
+	if (GCurShowState == SHOWSTATE_DEL)
+	{
+		GShowPnt = false;
+		GShowLin = false;
+		GShowReg = false;
+	}
+	GCurShowState = SHOWSTATE_UNDEL;
+	//若已经显示点，则关闭
+	if (GShowReg == true)
+		GShowReg = false;
+	else
+		GShowReg = true;
+	this->InvalidateRect(NULL);
 }
 
+
+void CMapEditorView::OnUpdateWindowShowRegion(CCmdUI* pCmdUI)
+{
+	if (GCurShowState == SHOWSTATE_UNDEL && GShowReg == true)
+		pCmdUI->SetCheck(1);
+	else
+		pCmdUI->SetCheck(0);
+}
+
+void CMapEditorView::OnUpdateRegionShowDeleted(CCmdUI* pCmdUI)
+{
+	if (GCurShowState == SHOWSTATE_DEL && GShowReg == true)
+		pCmdUI->SetCheck(1);
+	else
+		pCmdUI->SetCheck(0);
+}
 
 void CMapEditorView::OnPointCreate()
 {
 	if (GPntFCreated)
 		GCurOperState = OPERSTATE_INPUT_PNT;
 	else
-		MessageBox(L"还没有建立文件！", L"提示", MB_OK);
-	// TODO: 在此添加命令处理程序代码
+		MessageBox(L"还没有创建文件！", L"提示", MB_OK);
+
+	GCurShowState = SHOWSTATE_UNDEL; 
+	this->Invalidate();
+	GShowPnt = true;
+	GShowReg = true;
+	GShowLin = true;
 }
 
 
@@ -645,6 +1199,12 @@ void CMapEditorView::OnPointMove()
 		GCurOperState = OPERSTATE_MOVE_PNT;
 	else
 		MessageBox(L"还没有创建文件！", L"提示", MB_OK);
+
+	GCurShowState = SHOWSTATE_UNDEL;
+	this->Invalidate();
+	GShowPnt = true;
+	GShowReg = true;
+	GShowLin = true;
 }
 
 
@@ -653,43 +1213,102 @@ void CMapEditorView::OnPointDelete()
 	if (GPntFCreated)
 		GCurOperState = OPERSTATE_DELETE_PNT;	//将状态改为删除
 	else
-		MessageBox(L"还没有建立文件！", L"提示", MB_OK);
+		MessageBox(L"还没有创建文件！", L"提示", MB_OK);
+
+	GCurShowState = SHOWSTATE_UNDEL;
+	this->Invalidate();
+	GShowPnt = true;
+	GShowReg = true;
+	GShowLin = true;
 }
 
 
 void CMapEditorView::OnPointShowDeleted()
 {
-	// TODO: 在此添加命令处理程序代码
+	//不是显示删除，则打开
+	if (GCurShowState != SHOWSTATE_DEL)
+	{
+		GCurShowState = SHOWSTATE_DEL;
+		GShowPnt = true;
+		GShowLin = false;
+		GShowReg = false;
+	}
+	//是显示删除但是显示的不是点，调整
+	else if (GCurShowState == SHOWSTATE_DEL && GShowPnt != true)
+	{
+		GShowPnt = true;
+		GShowLin = false;
+		GShowReg = false;
+	}
+	//显示删除，改为正常显示
+	else
+	{
+		GCurShowState = SHOWSTATE_UNDEL;
+		GShowPnt = true;
+		GShowLin = true;
+		GShowReg = true;
+	}
+	this->InvalidateRect(NULL);
 }
 
 
 void CMapEditorView::OnPointUndelete()
 {
-	// TODO: 在此添加命令处理程序代码
+	if (GPntFCreated)
+	{
+		GCurOperState = OPERSTATE_UNDELETE_PNT;
+		GCurShowState = SHOWSTATE_DEL;
+		this->Invalidate();
+		GShowPnt = true;
+		GShowLin = false;
+		GShowReg = false;
+	}
+	else
+		MessageBox(L"还没有创建文件 ", L"提示", MB_OK);
 }
 
 
 void CMapEditorView::OnPointModifyParameter()
 {
-	// TODO: 在此添加命令处理程序代码
+	if (GPntFCreated)
+	{
+		GCurOperState = OPERSTATE_MODIFY_POINT_PARAMETER;
+		GCurShowState = SHOWSTATE_UNDEL;
+		GShowPnt = true;
+		GShowLin = false;
+		GShowReg = false;
+		this->Invalidate();
+	}
+	else
+		MessageBox(L"File have not been created. ", L"Message", MB_OK);
 }
 
 
 void CMapEditorView::OnPointSetDefparameter()
 {
-	// TODO: 在此添加命令处理程序代码
+	CPointParameterDlg dlg;
+	dlg.m_Pattern = GPnt.pattern;			//点型
+	dlg.m_ColorButton.SetColor(GPnt.color); //颜色
+	if (IDOK == dlg.DoModal())
+	{
+		GPnt.pattern = dlg.m_Pattern;
+		COLORREF tempColor = dlg.m_ColorButton.GetColor();
+		memcpy_s(&GPnt.color, sizeof(COLORREF), &tempColor, sizeof(COLORREF));
+	}
 }
 
 void CMapEditorView::OnLineCreate()
 {
 	if (GLinFCreated)
-	{
 		GCurOperState = OPERSTATE_INPUT_LIN;
-	}
 	else
-	{
 		MessageBox(L"还没有创建临时文件！", L"提示", MB_OK);
-	}
+
+	GCurShowState = SHOWSTATE_UNDEL;
+	this->Invalidate();
+	GShowPnt = true;
+	GShowReg = true;
+	GShowLin = true;
 }
 
 
@@ -699,6 +1318,12 @@ void CMapEditorView::OnLineMove()
 		GCurOperState = OPERSTATE_MOVE_LIN;
 	else
 		MessageBox(L"还没有创建临时文件！", L"提示", MB_OK);
+
+	GCurShowState = SHOWSTATE_UNDEL;
+	this->Invalidate();
+	GShowPnt = true;
+	GShowReg = true;
+	GShowLin = true;
 }
 
 
@@ -708,89 +1333,233 @@ void CMapEditorView::OnLineDeleted()
 		GCurOperState = OPERSTATE_DELETE_LIN;
 	else
 		MessageBox(L"还没有创建临时文件！", L"提示", MB_OK);
+
+	GCurShowState = SHOWSTATE_UNDEL;
+	this->Invalidate();
+	GShowPnt = true;
+	GShowReg = true;
+	GShowLin = true;
 }
 
 
 void CMapEditorView::OnLineShowDeleted()
 {
-	// TODO: 在此添加命令处理程序代码
+	//不是显示删除，则打开
+	if (GCurShowState != SHOWSTATE_DEL)
+	{
+		GCurShowState = SHOWSTATE_DEL;
+		GShowPnt = false;
+		GShowLin = true;
+		GShowReg = false;
+	}
+	//是显示删除但是显示的不是线，调整
+	else if (GCurShowState == SHOWSTATE_DEL && GShowLin != true)
+	{
+		GShowPnt = false;
+		GShowLin = true;
+		GShowReg = false;
+	}
+	//显示删除，改为正常显示
+	else
+	{
+		GCurShowState = SHOWSTATE_UNDEL;
+		GShowPnt = true;
+		GShowLin = true;
+		GShowReg = true;
+	}
+	this->InvalidateRect(NULL);
 }
 
 
 void CMapEditorView::OnLineUndetele()
 {
-	// TODO: 在此添加命令处理程序代码
+	if (GLinFCreated)
+	{
+		GCurOperState = OPERSTATE_UNDELETE_LIN;
+		GCurShowState = SHOWSTATE_DEL;
+		this->Invalidate();
+		GShowPnt = false;
+		GShowLin = true;
+		GShowReg = false;
+	}
+	else
+		MessageBox(L"还没有创建文件 ", L"提示", MB_OK);
 }
 
 
 void CMapEditorView::OnLineDeleteDot()
 {
-	// TODO: 在此添加命令处理程序代码
+	if (GLinFCreated)
+		GCurOperState = OPERSTATE_LIN_DELETE_DOT;
+	else
+		MessageBox(L"还没有创建临时文件！", L"提示", MB_OK);
 }
 
 
 void CMapEditorView::OnLineAddDot()
 {
-	// TODO: 在此添加命令处理程序代码
+	if (GLinFCreated)
+		GCurOperState = OPERSTATE_LIN_ADD_DOT;
+	else
+		MessageBox(L"还没有创建临时文件！", L"提示", MB_OK);
 }
 
 
 void CMapEditorView::OnLineLink()
 {
-	// TODO: 在此添加命令处理程序代码
+	if (GLinFCreated)
+		GCurOperState = OPERSTATE_LINK_LIN;
+	else
+		MessageBox(L"还没有创建临时文件！", L"提示", MB_OK);
 }
 
 
 void CMapEditorView::OnLineModifyParameter()
 {
-	// TODO: 在此添加命令处理程序代码
+	if (GLinFCreated)
+	{
+		GCurOperState = OPERSTATE_MODIFY_LINE_PARAMETER;
+		GCurShowState = SHOWSTATE_UNDEL;
+		GShowPnt = false;
+		GShowLin = true;
+		GShowReg = false;
+		this->Invalidate();
+	}
+	else
+		MessageBox(L"还没有创建文件！ ", L"提示", MB_OK);
 }
 
 
 void CMapEditorView::OnLineSetDeparameter()
 {
-	// TODO: 在此添加命令处理程序代码
+	CLineParameterDlg dlg;
+	dlg.m_Pattern = GLin.pattern;			
+	dlg.m_ColorButton.SetColor(GLin.color); 
+	if (IDOK == dlg.DoModal())
+	{
+		GLin.pattern = dlg.m_Pattern;
+		COLORREF tempColor = dlg.m_ColorButton.GetColor();
+		memcpy_s(&GLin.color, sizeof(COLORREF), &tempColor, sizeof(COLORREF));
+	}
 }
 
 void CMapEditorView::OnRegionCreate()
 {
-	// TODO: 在此添加命令处理程序代码
+	if (GRegFCreated)
+		GCurOperState = OPERSTATE_INPUT_REG; 
+	else
+		MessageBox(L"还没有创建临时文件 ", L"提示", MB_OK);
+
+	GCurShowState = SHOWSTATE_UNDEL;
+	this->Invalidate();
+	GShowPnt = true;
+	GShowReg = true;
+	GShowLin = true;
 }
 
 
 void CMapEditorView::OnRegionMove()
 {
-	// TODO: 在此添加命令处理程序代码
+	if (GRegFCreated)
+		GCurOperState = OPERSTATE_MOVE_REG; 
+	else
+		MessageBox(L"还没有创建临时文件 ", L"提示", MB_OK);
+
+	GCurShowState = SHOWSTATE_UNDEL;
+	this->Invalidate();
+	GShowPnt = true;
+	GShowReg = true;
+	GShowLin = true;
 }
 
 
 void CMapEditorView::OnRegionDelete()
 {
-	// TODO: 在此添加命令处理程序代码
+	if(GRegFCreated)
+		GCurOperState = OPERSTATE_DELETE_REG; 
+	else
+		MessageBox(L"还没有创建临时文件! ", L"提示", MB_OK);
+
+	GCurShowState = SHOWSTATE_UNDEL;
+	this->Invalidate();
+	GShowPnt = true;
+	GShowReg = true;
+	GShowLin = true;
 }
 
 
 void CMapEditorView::OnRegionShowDeleted()
 {
-	// TODO: 在此添加命令处理程序代码
+	//不是显示删除，则打开
+	if (GCurShowState != SHOWSTATE_DEL)
+	{
+		GCurShowState = SHOWSTATE_DEL;
+		GShowPnt = false;
+		GShowLin = false;
+		GShowReg = true;
+	}
+	//是显示删除但是显示的不是区，调整
+	else if (GCurShowState == SHOWSTATE_DEL && GShowReg != true)
+	{
+		GShowPnt = false;
+		GShowLin = false;
+		GShowReg = true;
+	}
+	//显示删除，改为正常显示
+	else
+	{
+		GCurShowState = SHOWSTATE_UNDEL;
+		GShowPnt = true;
+		GShowLin = true;
+		GShowReg = true;
+	}
+	this->InvalidateRect(NULL);
 }
 
 
 void CMapEditorView::OnRegionUndelete()
 {
-	// TODO: 在此添加命令处理程序代码
+	if (GRegFCreated)
+	{
+		GCurOperState = OPERSTATE_UNDELETE_REG;
+		GCurShowState = SHOWSTATE_DEL;
+		this->Invalidate();
+		GShowPnt = false;
+		GShowLin = false;
+		GShowReg = true;
+	}
+	else
+		MessageBox(L"还没有创建文件 ", L"提示", MB_OK);
 }
 
 
 void CMapEditorView::OnRegionModifyParameter()
 {
-	// TODO: 在此添加命令处理程序代码
+	if (GRegFCreated)
+	{
+		GCurOperState = OPERSTATE_MODIFY_REGION_PARAMETER;
+		GCurShowState = SHOWSTATE_UNDEL;
+		GShowPnt = false;
+		GShowLin = false;
+		GShowReg = true;
+		this->Invalidate();
+	}
+	else
+		MessageBox(L"还没有创建文件！ ", L"提示", MB_OK);
 }
 
 
 void CMapEditorView::OnRegionSetDefparameter()
 {
-	// TODO: 在此添加命令处理程序代码
+	CRegionParameterDlg dlg;
+	dlg.m_Pattern = GReg.pattern;
+	dlg.m_ColorButton.SetColor(GReg.color);
+	if (IDOK == dlg.DoModal())
+	{
+		GReg.pattern = dlg.m_Pattern;
+		COLORREF tempColor = dlg.m_ColorButton.GetColor();
+		memcpy_s(&GReg.color, sizeof(COLORREF), &tempColor, sizeof(COLORREF));
+	}
 }
 
 
@@ -799,28 +1568,36 @@ void CMapEditorView::OnLButtonUp(UINT nFlags, CPoint point)
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
 	CClientDC dc(this);
 	dc.SetROP2(R2_NOTXORPEN);
-	//------------------------------点-------------------------------//
+	D_DOT dot;
+	//--------------------------------------点-----------------------------------------//
 	if (GPntFCreated)
 	{
 		switch (GCurOperState)
 		{
 		//绘制点
 		case OPERSTATE_INPUT_PNT:
-			PNT_STRU pnt;
-			memcpy_s(&pnt, sizeof(PNT_STRU), &GPnt, sizeof(PNT_STRU));
-			pnt.x = point.x;
-			pnt.y = point.y; 
-			WritePntToFile(GPntTmpF, GPntNum, pnt); //写入临时文件
-
-			DrawPnt(&dc, pnt);
-			//点数加一
+			PNT_STRU Pnt;
+			memcpy_s(&Pnt, sizeof(PNT_STRU), &GPnt, sizeof(PNT_STRU));
+			PntToDot(dot, point);
+			PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);	//坐标系转化
+			Pnt.x = dot.x;
+			Pnt.y = dot.y;
+			WritePntToFile(GPntTmpF, GPntNum, Pnt); 
+			PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);	//坐标系转化
+			Pnt.x = dot.x;
+			Pnt.y = dot.y;
+			DrawPnt(&dc, Pnt); //画点
 			GPntNum++;
-			GPntLNum++;
-			GPntChanged = true;
+			GPntLNum++; 
+			GPntChanged = true; 
 			break;
 
 		//删除点
 		case OPERSTATE_DELETE_PNT:
+			//坐标系转化
+			PntToDot(dot, point);
+			PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+			DotToPnt(point, dot);
 			FindPnt(point, GPntNum, GPntTmpF, GPntNdx); 
 			//如果找到了最近点
 			if (GPntNdx != -1)
@@ -828,11 +1605,16 @@ void CMapEditorView::OnLButtonUp(UINT nFlags, CPoint point)
 				PNT_STRU pnt;
 				ReadTempFileToPnt(GPntTmpF, GPntNdx, pnt);	//读点
 				pnt.isDel = 1;								//标记删除
-				UpdatePnt(GPntTmpF, GPntNdx, pnt);			//更新数据
+				UpdatePnt(GPntTmpF, GPntNdx, pnt); 
+				dot.x = pnt.x;
+				dot.y = pnt.y;
+				PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y); 
+				pnt.x = dot.x;
+				pnt.y = dot.y;
 				DrawPnt(&dc, pnt);							//重绘以清除
 				GPntNdx = -1;
-				GPntChanged = true;
-				GPntLNum--;
+				GPntChanged = true; 
+				GPntLNum--; 
 			}
 			break;
 
@@ -849,12 +1631,63 @@ void CMapEditorView::OnLButtonUp(UINT nFlags, CPoint point)
 				GPntChanged = true; 
 			}
 			break;
+
+		//恢复点
+		case OPERSTATE_UNDELETE_PNT : 
+			PntToDot(dot, point);
+			PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y); 
+			DotToPnt(point, dot);
+			FindDeletePnt(point, GPntNum, GPntTmpF, GPntNdx); //找到最近的删除点
+			if (GPntNdx != -1)
+			{
+				PNT_STRU pnt;
+				ReadTempFileToPnt(GPntTmpF, GPntNdx, pnt);
+				pnt.isDel = 0;
+				UpdatePnt(GPntTmpF, GPntNdx, pnt);
+				dot.x = pnt.x;
+				dot.y = pnt.y;
+				PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+				pnt.x = dot.x;
+				pnt.y = dot.y;
+				DrawPnt(&dc, pnt);
+				GPntChanged = true;
+				GPntNdx = -1;
+				GPntLNum++;
+			}
+			break;
+
+		//修改点参数
+		case OPERSTATE_MODIFY_POINT_PARAMETER: 
+				PntToDot(dot, point);
+				PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+				DotToPnt(point, dot);
+				PNT_STRU tempPoint;
+				memcpy_s(&tempPoint, sizeof(PNT_STRU), &FindPnt(point, GPntNum, GPntTmpF, GPntNdx), sizeof(PNT_STRU));
+				if ( GPntNdx != -1 )
+				{
+				CPointParameterDlg dlg;
+				dlg.m_ColorButton.SetColor (tempPoint.color);
+				dlg.m_Pattern = tempPoint.pattern;
+				if (IDOK == dlg.DoModal())
+				{
+					COLORREF tempColor = dlg.m_ColorButton.GetColor( );
+					memcpy_s(&tempPoint.color, sizeof(COLORREF) ,&tempColor ,sizeof(COLORREF));
+					tempPoint.pattern = dlg.m_Pattern;
+					GPntTmpF->Seek(GPntNdx * sizeof(PNT_STRU) , CFile::begin);
+					GPntTmpF->Write(&tempPoint, sizeof(PNT_STRU));
+				}
+				this->Invalidate();
+				GPntChanged = true;
+				GPntNdx = -1;
+				}
+				break;
+
 		default:
 			break;
 		}
 	}
 
-	//-------------------------------线--------------------------------//
+	//-------------------------------------线----------------------------------------//
 	if (GLinFCreated)
 	{ 
 		D_DOT dot;
@@ -865,17 +1698,21 @@ void CMapEditorView::OnLButtonUp(UINT nFlags, CPoint point)
 			if (GTLin.dotNum == 0)
 				memcpy_s(&GTLin, sizeof(LIN_NDX_STRU), &GLin, sizeof(LIN_NDX_STRU));
 			PntToDot(dot, point);
-			WriteLinDatToFile(GLinTmpDatF, GLin.datOff, GTLin.dotNum, dot);
-			//写入线的临时数据
-			GTLin.dotNum ++; 
+			PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y); 
+			WriteLinDatToFile(GLinTmpDatF, GLin .datOff, GTLin .dotNum, dot);
+			GTLin.dotNum++;
+			PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y); 
 			GLPnt.x = (long)dot.x;	//起点
-			GLPnt.y = (long)dot.y;	//终点
-			GLinChanged = true;
+			GLPnt.y = (long)dot.y;
+			GLinChanged = true; 
 			break;
 
 		//删除线
-		case OPERSTATE_DELETE_LIN:
-			FindLin(GLinTmpNdxF, GLinTmpDatF, point, GLinNum, GLinNdx);
+		case OPERSTATE_DELETE_LIN: 
+			PntToDot(dot, point);
+			PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y); 
+			DotToPnt(point, dot);
+			FindLin(GLinTmpNdxF, GLinTmpDatF, point, GLinNum, GLinNdx); 
 			if (GLinNdx != -1)
 			{
 				GLinLNum--;
@@ -890,6 +1727,8 @@ void CMapEditorView::OnLButtonUp(UINT nFlags, CPoint point)
 				{
 					ReadTempFileToLinDat(GLinTmpDatF, TmpLinNdx.datOff, i, dot1);
 					ReadTempFileToLinDat(GLinTmpDatF, TmpLinNdx.datOff, i + 1, dot2);
+					PntDPtoVP(dot1, GZoom, GZoomOffset_x, GZoomOffset_y);
+					PntDPtoVP(dot2, GZoom, GZoomOffset_x, GZoomOffset_y);
 					DotToPnt(pnt1, dot1);
 					DotToPnt(pnt2, dot2);
 					DrawSeg(&dc, TmpLinNdx, pnt1, pnt2);
@@ -897,6 +1736,8 @@ void CMapEditorView::OnLButtonUp(UINT nFlags, CPoint point)
 				GLinNdx = -1;
 			}
 			break;
+
+			//移动线
 		case OPERSTATE_MOVE_LIN:
 			if (GLinNdx!= -1)
 				if (GLinLBDPnt.x != -1 && GLinLBDPnt.y != -1)
@@ -904,6 +1745,8 @@ void CMapEditorView::OnLButtonUp(UINT nFlags, CPoint point)
 					D_DOT dot1, dot2;
 					PntToDot(dot1, point);
 					PntToDot(dot2, GLinLBDPnt);
+					PntDPtoVP(dot1, GZoom, GZoomOffset_x, GZoomOffset_y);
+					PntDPtoVP(dot2, GZoom, GZoomOffset_x, GZoomOffset_y);
 					double offset_x = dot1.x - dot2.x;
 					double offset_y = dot1.y - dot2.y;
 					UpdateLin(GLinTmpNdxF, GLinTmpDatF, GLinNdx, offset_x, offset_y);
@@ -913,8 +1756,428 @@ void CMapEditorView::OnLButtonUp(UINT nFlags, CPoint point)
 					GLinChanged = true;
 				}
 			break;
+
+		//连接线
+		case OPERSTATE_LINK_LIN : 
+			if (GnLine < 2)
+			{
+				LIN_NDX_STRU line;
+				D_DOT dot;
+				PntToDot(dot, point);
+				PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+				DotToPnt(point, dot);
+				line = FindLin(GLinTmpNdxF, GLinTmpDatF, point, GLinNum, GLinNdx);
+				if (GLinNdx != -1)
+				{
+					GnLine++;
+					if (GnLine == 1)
+					{
+						GStartLin = line;
+						GnStart = GLinNdx;
+					}
+					else if (GnLine == 2)
+					{
+						if (GnStart != GLinNdx)
+						{
+							GEndLin = line;
+							GnEnd = GLinNdx;
+						}
+						else
+						GnLine--;
+					}
+				}
+				if (GnLine != 0)
+				{
+					D_DOT pt1;
+					D_DOT pt2;
+					if (GnLine == 1)
+					{	//选中第一个端点
+						ReadTempFileToLinDat(GLinTmpDatF, GStartLin.datOff, 0, pt1);
+						ReadTempFileToLinDat(GLinTmpDatF, GStartLin.datOff, GStartLin.dotNum - 1, pt2);
+						if (Distance(point.x, point.y, pt1.x, pt1.y) < Distance(point.x, point.y, pt2.x, pt2.y))
+						{
+							PntDPtoVP(pt1, GZoom, GZoomOffset_x, GZoomOffset_y);
+							dc.Ellipse((long)pt1.x - 2, (long)pt1.y - 2, (long)pt1.x + 2, (long)pt1.y + 2);
+							firstPoint = pt1;
+							order1 = 0;
+						}
+						else
+						{
+							PntDPtoVP(pt2, GZoom, GZoomOffset_x, GZoomOffset_y);
+							dc.Ellipse((long)pt2.x - 2, (long)pt2.y - 2, (long)pt2.x + 2, (long)pt2.y + 2);
+							firstPoint = pt2;
+							order1 = 1;
+						}
+					}
+					else if (GnLine == 2)
+					{	//选中第二个端点
+						D_DOT pt1;
+						D_DOT pt2;
+						ReadTempFileToLinDat(GLinTmpDatF, GStartLin.datOff, 0, pt1);
+						ReadTempFileToLinDat(GLinTmpDatF, GStartLin.datOff, GStartLin.dotNum - 1, pt2);
+						if (Distance(point.x, point.y, pt1.x, pt1.y) < Distance(point.x, point.y, pt2.x, pt2.y))
+						{
+							PntDPtoVP(pt1, GZoom, GZoomOffset_x, GZoomOffset_y);
+							dc.Ellipse((long)pt1.x - 2, (long)pt1.y - 2, (long)pt1.x + 2, (long)pt1.y + 2);
+							secondPoint = pt1;
+							order2 = 0;
+						}
+						else
+						{
+							PntDPtoVP(pt2, GZoom, GZoomOffset_x, GZoomOffset_y);
+							dc.Ellipse((long)pt2.x - 2, (long)pt2.y - 2, (long)pt2.x + 2, (long)pt2.y + 2);
+							secondPoint = pt2;
+							order2 = 1;
+						}
+						//开始连接
+						AlterLindot(GLinTmpDatF, GStartLin, GEndLin, firstPoint, secondPoint, GLin.datOff, order1, order2);
+						AlterStartLin(GLinTmpNdxF, GLin.datOff, GnStart, GStartLin.dotNum + GEndLin.dotNum);
+						AlterEndLin(GLinTmpNdxF, GnEnd);
+						GLin.datOff += (GStartLin.dotNum + GEndLin.dotNum) * sizeof(D_DOT);
+						GnLine = 0;
+						GLinLNum--;
+						GLinChanged = true;
+						GnStart = -1;
+						GnEnd = -1;
+						GLinNdx = -1;
+						this->Invalidate();
+					}
+				}
+			}
+			break;
+
+		//恢复线
+		case OPERSTATE_UNDELETE_LIN:
+			PntToDot(dot, point);
+			PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+			DotToPnt(point, dot);
+			FindDeleteLin(GLinTmpNdxF, GLinTmpDatF, point, GLinNum, GLinNdx);
+			if (GLinNdx != -1)
+			{
+				GLinChanged = true;
+				LIN_NDX_STRU TmpLinNdx;
+				D_DOT dot1, dot2;
+				POINT pnt1, pnt2;
+				ReadTempFileToLinNdx(GLinTmpNdxF, GLinNdx, TmpLinNdx);
+				TmpLinNdx.isDel = 0;
+				UpdateLin(GLinTmpNdxF, GLinNdx, TmpLinNdx);
+				for (int i = 0; i < TmpLinNdx.dotNum - 1; ++i)
+				{
+					ReadTempFileToLinDat(GLinTmpDatF, TmpLinNdx.datOff, i, dot1);
+					ReadTempFileToLinDat(GLinTmpDatF, TmpLinNdx.datOff, i + 1, dot2);
+					PntDPtoVP(dot1, GZoom, GZoomOffset_x, GZoomOffset_y);
+					PntDPtoVP(dot2, GZoom, GZoomOffset_x, GZoomOffset_y);
+					DotToPnt(pnt1, dot1);
+					DotToPnt(pnt2, dot2);
+					DrawSeg(&dc, TmpLinNdx, pnt1, pnt2);
+				}
+				GLinNdx = -1;
+				GLinLNum++;
+			}
+			break;
+
+		//修改线参数
+		case OPERSTATE_MODIFY_LINE_PARAMETER:
+			PntToDot(dot, point);
+			PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+			DotToPnt(point, dot);
+			LIN_NDX_STRU tempLine;
+			memcpy_s(&tempLine, sizeof(LIN_NDX_STRU), &FindLin(GLinTmpNdxF, GLinTmpDatF, point, GLinNum, GLinNdx), sizeof(LIN_NDX_STRU));
+			if (GLinNdx != -1)
+			{
+				CLineParameterDlg dlg;
+				dlg.m_ColorButton.SetColor(tempLine.color);
+				dlg.m_Pattern = tempLine.pattern;
+				if (IDOK == dlg.DoModal())
+				{
+					COLORREF tempColor = dlg.m_ColorButton.GetColor();
+					memcpy_s(&tempLine.color, sizeof(COLORREF), &tempColor, sizeof(COLORREF));
+					tempLine.pattern = dlg.m_Pattern;
+					GLinTmpNdxF->Seek(GLinNdx * sizeof(LIN_NDX_STRU), CFile::begin);
+					GLinTmpNdxF->Write(&tempLine, sizeof(LIN_NDX_STRU));
+				}
+				this->Invalidate();
+				GLinChanged = true;
+				GLinNdx = -1;
+			}
+			break;
+
+		//线上加点
+		case OPERSTATE_LIN_ADD_DOT:
+			switch(isPick)
+			{
+			case 0:
+				{
+					D_DOT dot;
+					PntToDot(dot, point);
+					PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+					DotToPnt(point, dot);
+					GLinToAdd = FindLin(GLinTmpNdxF, GLinTmpDatF, point, GLinNum, GLinNdx);
+					GnPick = GLinNdx;
+					D_DOT pt1;
+					D_DOT pt2;
+					if (GLinNdx != -1)
+						isPick = 1;
+					//选中端点
+					ReadTempFileToLinDat(GLinTmpDatF, GLinToAdd.datOff, 0, pt1);
+					ReadTempFileToLinDat(GLinTmpDatF, GLinToAdd.datOff, GLinToAdd.dotNum - 1, pt2);
+					if (Distance(point.x, point.y, pt1.x, pt1.y) < Distance(point.x, point.y, pt2.x, pt2.y))
+					{
+						PntDPtoVP(pt1, GZoom, GZoomOffset_x, GZoomOffset_y);
+						dc.Ellipse((long)pt1.x - 2, (long)pt1.y - 2, (long)pt1.x + 2, (long)pt1.y + 2);
+						order1 = 0;
+						GLPnt.x = (long)pt1.x;
+						GLPnt.y = (long)pt1.y;
+					}
+					else
+					{
+						PntDPtoVP(pt2, GZoom, GZoomOffset_x, GZoomOffset_y);
+						dc.Ellipse((long)pt2.x - 2, (long)pt2.y - 2, (long)pt2.x + 2, (long)pt2.y + 2);
+						order1 = 1;
+						GLPnt.x = (long)pt2.x;
+						GLPnt.y = (long)pt2.y;
+					}
+				}
+				break;
+			case 1:
+				{
+					memcpy_s(&GTLin, sizeof(LIN_NDX_STRU), &GLin, sizeof(LIN_NDX_STRU));
+					PntToDot(dot, point);
+					PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+					WriteLinDatToFile(GLinTmpDatF, GLin.datOff, GTLin.dotNum, dot);
+					GTLin.dotNum++;
+					PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+					GLPnt.x = (long)dot.x;	//起点
+					GLPnt.y = (long)dot.y;
+					GLinChanged = true;
+					break;
+					
+					/*
+					D_DOT _point;
+					D_DOT clickPoint = { point.x,point.y };
+					int ndot = 0;
+					if (order == 0)
+					{
+						for (int i = GLinToAdd.dotNum - 1; i >= 0; --i)
+						{
+							ReadTempFileToLinDat(GLinTmpDatF, GLinToAdd.datOff, i, _point);
+							WriteLinDatToFile(GLinTmpDatF, GLinToAdd.datOff, ndot, _point);
+							ndot++;
+						}
+						WriteLinDatToFile(GLinTmpDatF, GLinToAdd.datOff, ndot, clickPoint);
+					}
+					else if (order == 1)
+					{
+						for (int i = 0; i < GLinToAdd.dotNum; ++i)
+						{
+							ReadTempFileToLinDat(GLinTmpDatF, GLinToAdd.datOff, i, _point);
+							WriteLinDatToFile(GLinTmpDatF, GLinToAdd.datOff, ndot, _point);
+							ndot++;
+						}
+						WriteLinDatToFile(GLinTmpDatF, GLinToAdd.datOff, ndot, clickPoint);
+					}
+					LIN_NDX_STRU LinNdx;
+					GLinTmpNdxF->Seek(GnPick * sizeof(LIN_NDX_STRU), CFile::begin);
+					GLinTmpNdxF->Read(&LinNdx, sizeof(LIN_NDX_STRU));
+					LinNdx.datOff = GnPick;						//更新点索引
+					LinNdx.dotNum = GLinToAdd.dotNum + 1;		//更新点书目
+					GLinTmpNdxF->Seek(GnPick * sizeof(LIN_NDX_STRU), CFile::begin);
+					GLinTmpNdxF->Write(&LinNdx, sizeof(LIN_NDX_STRU));
+					*/
+
+					isPick = 0;
+					GnPick = -1;
+					GLinToAdd = GLin;
+					this->Invalidate();
+				}
+				break;
+			default:
+				break;
+			}
+			break;
 		default:
 			break;
+		}
+	}
+
+	//---------------------------------------缩放-------------------------------------------//
+	if (GPntFCreated || GLinFCreated || GRegFCreated)
+	{
+		RECT client, rect;
+		double zoom = 1.0;
+		switch (GCurOperState)
+		{
+			case OPERSTATE_ZOOM : //放大
+				GetClientRect(&client);
+				//0是单击放大，1是拉框放大
+				if (abs(GZoomLBDPnt.x - GZoomMMPnt.x) <= 10 && abs(GZoomLBDPnt.y-GZoomMMPnt.y) <= 10)
+					GZoomStyle = 0;		
+				else
+					GZoomStyle = 1; 
+
+				if (GZoomStyle == 0)	//单击
+				{
+					double x0 = point.x - (client.right / 2.0) + (client.right / 8.0);
+					double y0 = point.y - (client.bottom / 2.0) + (client.bottom / 8.0);
+					GZoomOffset_x += (x0 / GZoom);
+					GZoomOffset_y += (y0 / GZoom);
+					GZoom *= 4 / 3.0;
+				}
+				else					//拉框
+				{
+					rect.right = max(point.x, GZoomLBDPnt.x);
+					rect.left = min(point.x, GZoomLBDPnt.x);
+					rect.bottom = max(point.y, GZoomLBDPnt.y);
+					rect.top = min(point.y, GZoomLBDPnt.y);
+					modulusZoom(client, rect, zoom);
+					double x0 = GetCenter(rect).x - (client.right / 2.0) + (client.right *(zoom - 1) / (2.0 * zoom));
+					double y0 = GetCenter(rect).y - (client.bottom / 2.0) + (client.bottom * (zoom - 1) / (2.0 * zoom));
+					GZoomOffset_x += (x0 / GZoom); 
+					GZoomOffset_y += (y0 / GZoom);
+					GZoom *= zoom;
+					GZoomStyle = 0;
+				}
+				GZoomLBDPnt = CPoint(-1, -1);
+				GZoomMMPnt = CPoint(-1, -1);
+				this->Invalidate();
+				break;
+
+			case OPERSTATE_WINDOW_MOVE : 
+				//复位
+				GWinMoveLBDPnt = CPoint(-1, -1);
+				GWinMoveMMPnt = CPoint(-1, -1); 
+				break;
+			default:
+				break;
+		}
+	}
+
+	//----------------------------------------区----------------------------------------//
+	if (GRegFCreated)
+	{
+		D_DOT dot;
+		switch (GCurOperState)
+		{
+			case OPERSTATE_INPUT_REG :
+				if (GTReg.dotNum == 0)
+					memcpy_s(&GTReg, sizeof(REG_NDX_STRU), &GReg, sizeof(REG_NDX_STRU));
+				if (GRegCreateStartPnt.x == -1 && GRegCreateStartPnt.y == -1)
+					GRegCreateStartPnt = point;
+				if (GRegCreateMMPnt.x == -1 && GRegCreateMMPnt.y == -1)
+					GRegCreateMMPnt = point;
+				PntToDot(dot, point);
+				PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+				WriteRegDatToFile(GRegTmpDatF, GReg.datOff, GTReg.dotNum, dot);
+				++GTReg.dotNum;
+				if (GTReg.dotNum == 2)
+					this->Invalidate();	//区节点小于三个取消造区
+				GRegChanged = true;
+				break;
+
+			case OPERSTATE_DELETE_REG :
+				PntToDot(dot, point);
+				PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y); 
+				DotToPnt(point, dot);
+				FindReg(GRegTmpNdxF, GRegTmpDatF, point, GRegNum, GRegNdx);
+				if(GRegNdx != -1)
+				{ 
+					GRegLNum--;
+					GRegChanged = true;
+					REG_NDX_STRU TmpRegNdx;
+					ReadTempFileToRegNdx(GRegTmpNdxF, GRegNdx, TmpRegNdx); 
+					TmpRegNdx.isDel = 1;
+					UpdateReg(GRegTmpNdxF, GRegNdx, TmpRegNdx); //更新数据
+					D_DOT* dot = new D_DOT[TmpRegNdx.dotNum];
+					GRegTmpDatF->Seek(TmpRegNdx.datOff, CFile::begin);
+					GRegTmpDatF->Read(dot, TmpRegNdx.dotNum * sizeof(D_DOT));
+					for (int i = 0; i < TmpRegNdx.dotNum; ++i)
+					{
+						PntDPtoVP(dot[i], GZoom, GZoomOffset_x, GZoomOffset_y);
+					}
+					POINT* pnt = new POINT[TmpRegNdx.dotNum];
+					DotToPnt(pnt, dot, TmpRegNdx.dotNum);
+					DrawReg(&dc, TmpRegNdx, pnt, TmpRegNdx.dotNum);	//重绘以擦除
+					delete[] pnt;
+					delete[] dot;
+					GRegNdx = -1;
+				}
+				break;
+
+			case OPERSTATE_MOVE_REG:
+				if (GRegNdx != -1)
+				{
+					if (GRegLBDPnt.x != -1 && GRegLBDPnt.y != -1)
+					{
+						D_DOT dot1, dot2;
+						PntToDot(dot1, point);
+						PntVPtoDP(dot1, GZoom, GZoomOffset_x, GZoomOffset_y);
+						PntToDot(dot2, GRegLBDPnt);
+						PntVPtoDP(dot2, GZoom, GZoomOffset_x, GZoomOffset_y);
+						double offset_x = dot1.x - dot2.x;
+						double offset_y = dot1.y - dot2.y;
+						UpdateReg(GRegTmpNdxF, GRegTmpDatF, GRegNdx, offset_x, offset_y);
+						GRegNdx = -1;
+						GRegMMOffsetX = 0;
+						GRegMMOffsetY = 0;
+						GRegChanged = true;
+					}
+				}
+				break;
+
+			case OPERSTATE_UNDELETE_REG:
+				PntToDot(dot, point);
+				PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+				DotToPnt(point, dot);
+				FindDeleteReg(GRegTmpNdxF, GRegTmpDatF, point, GRegNum, GRegNdx);
+				if (GRegNdx != -1)
+				{
+					GRegChanged = true;
+					REG_NDX_STRU TmpRegNdx;
+					ReadTempFileToRegNdx(GRegTmpNdxF, GRegNdx, TmpRegNdx);
+					TmpRegNdx.isDel = 0;
+					UpdateReg(GRegTmpNdxF, GRegNdx, TmpRegNdx); //更新数据
+					D_DOT* dot = new D_DOT[TmpRegNdx.dotNum];
+					GRegTmpDatF->Seek(TmpRegNdx.datOff, CFile::begin);
+					GRegTmpDatF->Read(dot, TmpRegNdx.dotNum * sizeof(D_DOT));
+					for (int i = 0; i < TmpRegNdx.dotNum; ++i)
+					{
+						PntDPtoVP(dot[i], GZoom, GZoomOffset_x, GZoomOffset_y);
+					}
+					POINT* pnt = new POINT[TmpRegNdx.dotNum];
+					DotToPnt(pnt, dot, TmpRegNdx.dotNum);
+					DrawReg(&dc, TmpRegNdx, pnt, TmpRegNdx.dotNum);	//重绘以擦除
+					delete[] pnt;
+					delete[] dot;
+					GRegNdx = -1;
+					GRegLNum++;
+				}
+				break;
+
+			//修改区参数
+			case OPERSTATE_MODIFY_REGION_PARAMETER:
+				PntToDot(dot, point);
+				PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+				DotToPnt(point, dot);
+				REG_NDX_STRU tempRegion;
+				memcpy_s(&tempRegion, sizeof(REG_NDX_STRU), &FindReg(GRegTmpNdxF, GRegTmpDatF, point, GRegNum, GRegNdx), sizeof(REG_NDX_STRU));
+				if (GRegNdx != -1)
+				{
+					CRegionParameterDlg dlg;
+					dlg.m_ColorButton.SetColor(tempRegion.color);
+					dlg.m_Pattern = tempRegion.pattern;
+					if (IDOK == dlg.DoModal())
+					{
+						COLORREF tempColor = dlg.m_ColorButton.GetColor();
+						memcpy_s(&tempRegion.color, sizeof(COLORREF), &tempColor, sizeof(COLORREF));
+						tempRegion.pattern = dlg.m_Pattern;
+						GRegTmpNdxF->Seek(GRegNdx * sizeof(REG_NDX_STRU), CFile::begin);
+						GRegTmpNdxF->Write(&tempRegion, sizeof(REG_NDX_STRU));
+					}
+					this->Invalidate();
+					GRegChanged = true;
+					GRegNdx = -1;
+				}
+				break;
 		}
 	}
 	CView::OnLButtonUp(nFlags, point);
@@ -938,15 +2201,57 @@ void CMapEditorView::OnLButtonDown(UINT nFlags, CPoint point)
 	{
 		switch (GCurOperState)
 		{
-		case OPERSTATE_MOVE_LIN:
-			GLinMMTmpNdx = FindLin(GLinTmpNdxF, GLinTmpDatF, point, GLinNum, GLinNdx); 
+		case OPERSTATE_MOVE_LIN: 
+			D_DOT dot;
+			PntToDot(dot, point);
+			PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+			DotToPnt(point, dot);
+			GLinMMTmpNdx = FindLin(GLinTmpNdxF, GLinTmpDatF, point, GLinNum, GLinNdx);
 			GLinMMOffsetX = 0;
 			GLinMMOffsetY = 0;
+			PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+			DotToPnt(point, dot);
 			GLinLBDPnt = point;
 			GLinMMPnt = point;
 			break;
 		default:
 			break;
+		}
+	}
+	//------------------------------缩放和移动------------------------------//
+	if (GPntFCreated || GLinFCreated || GRegFCreated)
+	{
+		switch (GCurOperState)
+		{
+		case OPERSTATE_ZOOM: //放大
+			GZoomLBDPnt = point;
+			GZoomMMPnt = point;
+			break;
+		case OPERSTATE_WINDOW_MOVE:
+			GWinMoveLBDPnt = point;
+			GWinMoveMMPnt = point;
+			break;
+		default:
+			break;
+		}
+	}
+
+	//-------------------------------区-----------------------------//
+	if (GRegFCreated)
+	{
+		switch (GCurOperState)
+		{
+		case OPERSTATE_MOVE_REG :
+				GRegLBDPnt = point;
+				GRegMMPnt = point;
+				D_DOT dot;
+				PntToDot(dot, point);
+				PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+				DotToPnt(point, dot);
+				GRegMMTmpNdx = FindReg(GRegTmpNdxF, GRegTmpDatF, point, GRegNum, GRegNdx); 
+				GRegMMOffsetX = 0;
+				GRegMMOffsetY = 0;
+				break;
 		}
 	}
 	CView::OnLButtonDown(nFlags, point);
@@ -1004,87 +2309,220 @@ void CMapEditorView::OnDestroy()
 
 void CMapEditorView::OnMouseMove(UINT nFlags, CPoint point)
 {
-	//-------------------------------点--------------------------------//
+	//--------------------------------点----------------------------------//
 	if (GPntFCreated)
 	{
 		switch (GCurOperState)
 		{
 		case OPERSTATE_MOVE_PNT:
-			if (GPntNdx != -1)
+			D_DOT dot;
+			PntToDot(dot, point);
+			PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+			DotToPnt(point, dot);
+			GTPnt = FindPnt(point, GPntNum, GPntTmpF, GPntNdx);
+			dot.x = GTPnt.x;
+			dot.y = GTPnt.y;
+			PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+			GTPnt.x = dot.x;
+			GTPnt.y = dot.y;
+			break;
+		default:
+			break;
+		}
+	}
+	//---------------------------------线----------------------------------//
+	if (GLinFCreated)
+	{
+		switch (GCurOperState)
+		{
+		case OPERSTATE_INPUT_LIN:
+			if (GTLin.dotNum > 0)
 			{
 				CClientDC dc(this);
-				dc.SetROP2(R2_NOTXORPEN);//进行异或模式画点
-				DrawPnt(&dc, GTPnt);	//在原位置画，即清除原来的点
-				GTPnt.x = point.x;
-				GTPnt.y = point.y;
-				DrawPnt(&dc, GTPnt);	//在新位置画点
+				dc.SetROP2(R2_NOTXORPEN);
+				if (GMPnt.x != -1 && GMPnt.y != -1)
+					DrawSeg(&dc, GTLin, GLPnt, GMPnt);
+				//保存上一状态
+				GMPnt.x = point.x;
+				GMPnt.y = point.y;
+				POINT mpoint = { mpoint.x = point.x,mpoint.y = point.y };
+				DrawSeg(&dc, GTLin, GLPnt, mpoint);//连接
+			}
+			break;
+
+		case OPERSTATE_MOVE_LIN:
+			if (GLinNdx != -1)
+			{
+				CClientDC dc(this);
+				dc.SetROP2(R2_NOTXORPEN);
+				D_DOT dot1, dot2;
+				POINT pnt1, pnt2;
+				//擦除原来的线
+				for (int i = 0; i < GLinMMTmpNdx.dotNum - 1; i++)
+				{
+					ReadTempFileToLinDat(GLinTmpDatF, GLinMMTmpNdx.datOff, i, dot1);
+					ReadTempFileToLinDat(GLinTmpDatF, GLinMMTmpNdx.datOff, i + 1, dot2);
+					//坐标系转化
+					PntDPtoVP(dot1, GZoom, GZoomOffset_x, GZoomOffset_y);
+					PntDPtoVP(dot2, GZoom, GZoomOffset_x, GZoomOffset_y);
+					DotToPnt(pnt1, dot1);
+					DotToPnt(pnt2, dot2);
+					pnt1.x += GLinMMOffsetX;
+					pnt1.y += GLinMMOffsetY;
+					pnt2.x += GLinMMOffsetX;
+					pnt2.y += GLinMMOffsetY;
+					DrawSeg(&dc, GLinMMTmpNdx, pnt1, pnt2);
+				}
+				//计算偏移量
+				GLinMMOffsetX = GLinMMOffsetX + point.x - GLinMMPnt.x;
+				GLinMMOffsetY = GLinMMOffsetY + point.y - GLinMMPnt.y;
+				//在新的位置绘制新的线段
+				for (int i = 0; i < GLinMMTmpNdx.dotNum - 1; i++)
+				{
+					ReadTempFileToLinDat(GLinTmpDatF, GLinMMTmpNdx.datOff, i, dot1);
+					ReadTempFileToLinDat(GLinTmpDatF, GLinMMTmpNdx.datOff, i + 1, dot2);
+					PntDPtoVP(dot1, GZoom, GZoomOffset_x, GZoomOffset_y);
+					PntDPtoVP(dot2, GZoom, GZoomOffset_x, GZoomOffset_y);
+					DotToPnt(pnt1, dot1);
+					DotToPnt(pnt2, dot2);
+					pnt1.x += GLinMMOffsetX;
+					pnt1.y += GLinMMOffsetY;
+					pnt2.x += GLinMMOffsetX;
+					pnt2.y += GLinMMOffsetY;
+					DrawSeg(&dc, GLinMMTmpNdx, pnt1, pnt2);
+				}
+				GLinMMPnt = point;
+			}
+			break;
+
+		case OPERSTATE_LIN_ADD_DOT:
+			if(isPick)
+			{
+				CClientDC dc(this);
+				dc.SetROP2(R2_NOTXORPEN);
+				if (GMPnt.x != -1 && GMPnt.y != -1)
+					DrawSeg(&dc, GTLin, GLPnt, GMPnt);
+				//保存上一状态
+				GMPnt.x = point.x;
+				GMPnt.y = point.y;
+				POINT mpoint = { mpoint.x = point.x,mpoint.y = point.y };
+				DrawSeg(&dc, GTLin, GLPnt, mpoint);//连接
 			}
 			break;
 		default:
 			break;
 		}
 	}
-	//-------------------------------线--------------------------------//
-	if (GLinFCreated)
+
+	//-------------------------------------缩放和移动--------------------------------------------//
+
+	if (GPntFCreated || GLinFCreated || GRegFCreated)
 	{
+		CClientDC dc(this);
+		CPen pen(PS_DOT, 1, RGB(0, 0, 0));
+		CPen* oldPen = dc.SelectObject(&pen);
 		switch (GCurOperState)
 		{
-			case OPERSTATE_INPUT_LIN :
-				if (GTLin.dotNum > 0)
-				{
-					CClientDC dc(this);
-					dc.SetROP2(R2_NOTXORPEN);
-					if (GMPnt.x != -1 && GMPnt.y != -1)
-						DrawSeg(&dc, GTLin, GLPnt, GMPnt);
-					//保存上一状态
-					GMPnt.x = point.x;
-					GMPnt.y = point.y;
-					POINT mpoint = { mpoint.x = point.x,mpoint.y = point.y };
-					DrawSeg(&dc, GTLin, GLPnt, mpoint);//连接
-					break;
-				}
-			case OPERSTATE_MOVE_LIN: 
-				if (GLinNdx != -1)
-				{
-					CClientDC dc(this);
-					dc.SetROP2(R2_NOTXORPEN);
-					D_DOT dot1, dot2;
-					POINT pntl, pnt2;
-					//擦除原来的线
-					for (int i = 0; i < GLinMMTmpNdx.dotNum - 1; i++)
-					{
-						ReadTempFileToLinDat(GLinTmpDatF, GLinMMTmpNdx.datOff, i, dot1);
-						ReadTempFileToLinDat(GLinTmpDatF, GLinMMTmpNdx.datOff, i + 1, dot2);
-						DotToPnt(pntl, dot1);
-						DotToPnt(pnt2, dot2);
-						pntl.x += GLinMMOffsetX;
-						pntl.y += GLinMMOffsetY;
-						pnt2.x += GLinMMOffsetX;
-						pnt2.y += GLinMMOffsetY;
-						DrawSeg(&dc, GLinMMTmpNdx, pntl, pnt2);
-					}
-					//计算偏移量
-					GLinMMOffsetX = GLinMMOffsetX + point.x - GLinMMPnt.x;
-					GLinMMOffsetY = GLinMMOffsetY + point.y - GLinMMPnt.y;
-					//在新的位置绘制新的线段
-					for (int i = 0; i < GLinMMTmpNdx.dotNum - 1; i++)
-					{
-						ReadTempFileToLinDat(GLinTmpDatF, GLinMMTmpNdx.datOff, i, dot1);
-						ReadTempFileToLinDat(GLinTmpDatF, GLinMMTmpNdx.datOff, i + 1, dot2);
-						DotToPnt(pntl, dot1);
-						DotToPnt(pnt2, dot2);
-						pntl.x += GLinMMOffsetX;
-						pntl.y += GLinMMOffsetY;
-						pnt2.x += GLinMMOffsetX;
-						pnt2.y += GLinMMOffsetY;
-						DrawSeg(&dc, GLinMMTmpNdx, pntl, pnt2);
-					}
-					GLinMMPnt = point;
-				}
-				break;
-			default:
-				break;
+		case OPERSTATE_ZOOM: //放大
+			if (GZoomMMPnt.x != -1 && GZoomMMPnt.y != -1)
+			{
+				dc.SetROP2(R2_NOTXORPEN);
+				dc.Rectangle(GZoomLBDPnt.x, GZoomLBDPnt.y, GZoomMMPnt.x, GZoomMMPnt.y);
+				dc.Rectangle(GZoomLBDPnt.x, GZoomLBDPnt.y, point.x, point.y);
+				GZoomMMPnt = point;
+				dc.SelectObject(oldPen);
+			}
+			break;
+		case OPERSTATE_WINDOW_MOVE :
+			if (GWinMoveMMPnt.x != -1 && GWinMoveMMPnt.y != -1)
+			{
+				CPoint offset(0, 0);
+				offset.x = point.x - GWinMoveLBDPnt.x;
+				offset.y = point.y - GWinMoveLBDPnt.y;
+				GZoomOffset_x -= offset.x / GZoom;
+				GZoomOffset_y -= offset.y / GZoom;
+				GWinMoveLBDPnt = point;
+				this->Invalidate();
+			}
+			break;
+		default:
+			break;
 		}
 	}
+
+	//-------------------------------------区-------------------------------------//
+	if (GRegFCreated)
+		switch (GCurOperState)
+		{
+		case OPERSTATE_INPUT_REG:
+		{
+			if (GRegCreateMMPnt.x != -1 && GRegCreateMMPnt.y != -1)
+			{
+				CClientDC dc(this);
+				dc.SetROP2(R2_NOTXORPEN);
+				LIN_NDX_STRU tln = { tln.pattern = GTReg.pattern, tln.color = GTReg.color };
+				if (GTReg.dotNum == 1)
+				{
+					DrawSeg(&dc, tln, GRegCreateStartPnt, GRegCreateMMPnt);
+					DrawSeg(&dc, tln, GRegCreateStartPnt, point);
+				}
+				else
+				{
+
+					D_DOT* dot = new D_DOT[GTReg.dotNum];
+					for (int i = 0; i < GTReg.dotNum; ++i)
+					{
+						ReadTempFileToRegDat(GRegTmpDatF, GTReg.datOff, i, dot[i]);
+						PntDPtoVP(dot[i], GZoom, GZoomOffset_x, GZoomOffset_y);
+					}
+					POINT* pnt = new POINT[GTReg.dotNum + 1];
+					DotToPnt(pnt, dot, GTReg.dotNum);
+					pnt[GTReg.dotNum] = GRegCreateMMPnt;
+					DrawReg(&dc, GTReg, pnt, GTReg.dotNum + 1);
+					pnt[GTReg.dotNum] = point;
+					DrawReg(&dc, GTReg, pnt, GTReg.dotNum + 1);
+					delete[] dot;
+					delete[] pnt;
+				}
+				GRegCreateMMPnt = point;
+			}
+			break;
+		}
+		case OPERSTATE_MOVE_REG:
+			if (GRegNdx != -1)
+			{
+				CClientDC dc(this);
+				dc.SetROP2(R2_NOTXORPEN);
+				D_DOT* dot = new D_DOT[GRegMMTmpNdx.dotNum];
+				for (int i = 0; i < GRegMMTmpNdx.dotNum; i++)
+				{
+					ReadTempFileToRegDat(GRegTmpDatF, GRegMMTmpNdx.datOff, i, dot[i]);
+					PntDPtoVP(dot[i], GZoom, GZoomOffset_x, GZoomOffset_y);
+					dot[i].x += GRegMMOffsetX;
+					dot[i].y += GRegMMOffsetY;
+				}
+				POINT* pnt = new POINT[GRegMMTmpNdx.dotNum];
+				DotToPnt(pnt, dot, GRegMMTmpNdx.dotNum);
+				DrawReg(&dc, GRegMMTmpNdx, pnt, GRegMMTmpNdx.dotNum);
+				GRegMMOffsetX = GRegMMOffsetX + point.x - GRegMMPnt.x;
+				GRegMMOffsetY = GRegMMOffsetY + point.y - GRegMMPnt.y;
+				for (int i = 0; i < GRegMMTmpNdx.dotNum; i++)
+				{
+					ReadTempFileToRegDat(GRegTmpDatF, GRegMMTmpNdx.datOff, i, dot[i]);
+					PntDPtoVP(dot[i], GZoom, GZoomOffset_x, GZoomOffset_y);
+					dot[i].x += GRegMMOffsetX;
+					dot[i].y += GRegMMOffsetY;
+				}
+				DotToPnt(pnt, dot, GRegMMTmpNdx.dotNum);
+				DrawReg(&dc, GRegMMTmpNdx, pnt, GRegMMTmpNdx.dotNum);
+				delete[] dot;
+				delete[] pnt;
+				GRegMMPnt = point;
+			}
+			break;
+		default:
+			break;
+		}
 	CView::OnMouseMove(nFlags, point);
 }
+

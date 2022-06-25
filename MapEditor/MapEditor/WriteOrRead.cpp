@@ -1,6 +1,6 @@
 #include"pch.h"
 #include"WriteOrRead.h"
-//--------------------------------点部分--------------------------------------//
+//----------------------------------------------点部分------------------------------------------------------//
 
 //将点写入临时文件
 void WritePntToFile(CFile* PntTmpF, int i, PNT_STRU point)
@@ -36,7 +36,7 @@ void UpdatePnt(CFile* pntTmpF, int i, PNT_STRU point)
 	WritePntToFile(pntTmpF, i, point);
 }
 
-//--------------------------------线部分---------------------------------------//
+//------------------------------------------------线部分--------------------------------------------------------//
 
 //将第i条线的引索写入临时文件
 void WriteLinNdxToFile(CFile* LinTmpNdxF, int i, LIN_NDX_STRU line)
@@ -146,5 +146,127 @@ void UpdateLin(CFile* LinTmpNdxF, CFile* LinTmpDatF, int LinNdx, double offset_x
 	}
 }
 
+//连接两条线
+void AlterStartLin(CFile* LinTmpNdxF, long subdatOff, int nLine, int subNum)
+{
+	LIN_NDX_STRU LinNdx;
+	LinTmpNdxF->Seek(nLine * sizeof(LIN_NDX_STRU), CFile::begin);
+	LinTmpNdxF->Read(&LinNdx, sizeof(LIN_NDX_STRU));
+	LinNdx.datOff = subdatOff;	//更新点索引
+	LinNdx.dotNum = subNum;		//更新点书目
+	LinTmpNdxF->Seek(nLine * sizeof(LIN_NDX_STRU), CFile::begin);
+	LinTmpNdxF->Write(&LinNdx, sizeof(LIN_NDX_STRU));
+}
+void AlterEndLin(CFile* LinTmpNdxF, int nLine)
+{
+	LIN_NDX_STRU linNdx;
+	LinTmpNdxF->Seek(nLine * sizeof(LIN_NDX_STRU), CFile::begin);
+	LinTmpNdxF->Read(&linNdx, sizeof(LIN_NDX_STRU));
+	linNdx.dotNum = 0;
+	linNdx.isDel = 0;
+	LinTmpNdxF->Seek(nLine * sizeof(LIN_NDX_STRU), CFile::begin);
+	LinTmpNdxF->Write(&linNdx, sizeof(LIN_NDX_STRU));
+}
 
+//----------------------------------------------区部分-------------------------------------------------------//
+void WriteRegNdxToFile(CFile* RegTmpNdxF, int i, REG_NDX_STRU Region)
+{
+	RegTmpNdxF->Seek(i * sizeof(REG_NDX_STRU), CFile::begin);
+	RegTmpNdxF->Write(&Region, sizeof(REG_NDX_STRU));
+}
+
+void WriteRegDatToFile(CFile* RegTmpDatF, long datOff, int i, D_DOT point)
+{
+	RegTmpDatF->Seek(datOff + i * sizeof(D_DOT), CFile::begin);
+	RegTmpDatF->Write(&point, sizeof(D_DOT));
+}
+
+void ReadTempFileToRegNdx(CFile* RegTmpNdxF, int i, REG_NDX_STRU& RegNdx)
+{
+	RegTmpNdxF->Seek(i * sizeof(REG_NDX_STRU), CFile::begin);
+	RegTmpNdxF->Read(&RegNdx, sizeof(REG_NDX_STRU));
+}
+
+void ReadTempFileToRegDat(CFile* RegTmpDatF, long datOff, int i, D_DOT& Pnt)
+{
+	RegTmpDatF->Seek(datOff + i * sizeof(D_DOT), CFile::begin);
+	RegTmpDatF->Read(&Pnt, sizeof(D_DOT));
+}
+
+void WriteTempToRegPermanentFile(CFile* RegF, CFile* RegTmpDatF, CFile* RegTmpNdxF, VERSION RegVer, int nReg, int nLReg)
+{
+	REG_NDX_STRU TempRegNdx;
+	D_DOT Pnt;
+	long RegNdxOffset = sizeof(VERSION) + sizeof(int) * 2;
+	long RegDatOffset = RegNdxOffset + sizeof(REG_NDX_STRU) * nReg;
+	RegF->Write(&RegVer, sizeof(VERSION));//写入版本信息
+	RegF->Write(&nReg, sizeof(int));//写入物理数
+	RegF->Write(&nLReg, sizeof(int));//写入逻辑数
+	for (int i = 0; i < nReg; i++)
+	{
+		ReadTempFileToRegNdx(RegTmpNdxF, i, TempRegNdx);
+		RegF->Seek(RegDatOffset, CFile::begin);
+		for (int j = 0; j < TempRegNdx.dotNum; j++)
+		{
+			ReadTempFileToRegDat(RegTmpDatF, TempRegNdx.datOff, j, Pnt);
+			RegF->Write(&Pnt, sizeof(D_DOT));
+		}
+		RegF->Seek(RegNdxOffset, CFile::begin);
+		TempRegNdx.datOff = RegDatOffset;
+		RegF->Write(&TempRegNdx, sizeof(REG_NDX_STRU));
+		RegNdxOffset += sizeof(REG_NDX_STRU);
+		RegDatOffset += (sizeof(D_DOT) * TempRegNdx.dotNum);
+	}
+}
+
+
+void ReadRegPermanentFileToTemp(CFile* RegF, CFile* RegTmpDatF, CFile* RegTmpNdxF, VERSION& RegVer, int& nReg, int& nLReg, long& TmpFRegDatOffset)
+{
+	RegF->Seek(0, CFile::begin);
+	RegF->Read(&RegVer, sizeof(VERSION));
+	RegF->Read(&nReg, sizeof(int));//读物理个数
+	RegF->Read(&nLReg, sizeof(int)); //读逻辑个数
+	long RegNdxOffset = sizeof(VERSION) + sizeof(int) * 2;
+	long RegDatOffset = RegNdxOffset + sizeof(REG_NDX_STRU) * nReg;
+	TmpFRegDatOffset = 0;
+	REG_NDX_STRU TempRegNdx;
+	D_DOT Pnt;
+	for (int i = 0; i < nReg; i++)
+	{
+		RegF->Seek(RegNdxOffset, CFile::begin);
+		RegF->Read(&TempRegNdx, sizeof(REG_NDX_STRU));
+		RegF->Seek(TempRegNdx.datOff, CFile::begin);
+		for (int j = 0; j < TempRegNdx.dotNum; j++)
+		{
+			RegF->Read(&Pnt, sizeof(D_DOT));
+			RegTmpDatF->Write(&Pnt, sizeof(D_DOT));
+		}
+		TempRegNdx.datOff = TmpFRegDatOffset;
+		RegTmpNdxF->Write(&TempRegNdx, sizeof(REG_NDX_STRU));
+		TmpFRegDatOffset += (sizeof(D_DOT) * TempRegNdx.dotNum);
+		RegDatOffset += (sizeof(D_DOT) * TempRegNdx.dotNum);
+		RegNdxOffset += sizeof(REG_NDX_STRU);
+	}
+}
+
+//更新区信息
+void UpdateReg(CFile* RegTmpNdxF, int nReg, REG_NDX_STRU Region)
+{
+	WriteRegNdxToFile(RegTmpNdxF, nReg, Region);
+}
+void UpdateReg(CFile* RegTmpNdxF, CFile* RegTmpDatF, int RegNdx, double offset_x, double offset_y)
+{
+	REG_NDX_STRU tReg;
+	D_DOT pt;
+	ReadTempFileToRegNdx(RegTmpNdxF, RegNdx, tReg);
+	for (int i = 0; i < tReg.dotNum; i++)
+	{
+		RegTmpDatF->Seek(tReg.datOff + i * sizeof(D_DOT), CFile::begin);
+		RegTmpDatF->Read(&pt, sizeof(D_DOT));
+		pt.x = pt.x + offset_x;
+		pt.y = pt.y + offset_y;
+		RegTmpDatF->Seek(tReg.datOff + i * sizeof(D_DOT), CFile::begin);
+		RegTmpDatF->Write(&pt, sizeof(D_DOT));
+	}
+}
 

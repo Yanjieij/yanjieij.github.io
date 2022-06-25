@@ -1,3 +1,10 @@
 ﻿C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\MSBuild\Microsoft\VC\v160\Microsoft.CppBuild.targets(513,5): warning MSB8028: 中间目录(Debug\)包含从另一个项目(MapEditor1.vcxproj)共享的文件。   这会导致错误的清除和重新生成行为。
   MapEditorView.cpp
+C:\Users\Yanjieij\Desktop\homework\OOP课设\OOPtest_郭延铎\MapEditor\MapEditorView.cpp(381,38): warning C4838: 从“int”转换到“char”需要收缩转换
+C:\Users\Yanjieij\Desktop\homework\OOP课设\OOPtest_郭延铎\MapEditor\MapEditorView.cpp(914,37): warning C4554: “&”: 检查运算符优先级是否存在的可能的错误；使用括号阐明优先级
+C:\Users\Yanjieij\Desktop\homework\OOP课设\OOPtest_郭延铎\MapEditor\MapEditorView.cpp(968,13): warning C4553: “==”: 未使用表达式结果；是否打算使用“=”?
+C:\Users\Yanjieij\Desktop\homework\OOP课设\OOPtest_郭延铎\MapEditor\MapEditorView.cpp(1945,32): warning C4838: 从“LONG”转换到“double”需要收缩转换
+C:\Users\Yanjieij\Desktop\homework\OOP课设\OOPtest_郭延铎\MapEditor\MapEditorView.cpp(1945,40): warning C4838: 从“LONG”转换到“double”需要收缩转换
+C:\Users\Yanjieij\Desktop\homework\OOP课设\OOPtest_郭延铎\MapEditor\MapEditorView.cpp(1983,4): warning C4809: 切换语句有多余的“default”标签；给定所有可能的“case”标签
+C:\Users\Yanjieij\Desktop\homework\OOP课设\OOPtest_郭延铎\MapEditor\MapEditorView.cpp(2450,38): warning C4838: 从“int”转换到“char”需要收缩转换
   MapEditor.vcxproj -> C:\Users\Yanjieij\Desktop\homework\OOP课设\OOPtest_郭延铎\Debug\MapEditor.exe

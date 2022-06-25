@@ -41,7 +41,6 @@ protected:
 	afx_msg void OnContextMenu(CWnd* pWnd, CPoint point);
 	DECLARE_MESSAGE_MAP()
 public:
-	afx_msg void OnWindowZoomIn();
 	afx_msg void OnFileNew();
 	afx_msg void OnFileOpenPoint();
 	afx_msg void OnFileOpenLine();
@@ -53,7 +52,6 @@ public:
 	afx_msg void OnFileSaveAsLine();
 	afx_msg void OnFileSaveAsRegion();
 	afx_msg void OnAppExit();
-	afx_msg void OnWindowZoomOut();
 	afx_msg void OnWindowMove();
 	afx_msg void OnWindowReset();
 	afx_msg void OnWindowShowPoint();
@@ -87,6 +85,13 @@ public:
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnDestroy();
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
+	afx_msg void OnWindowZoom();
+	afx_msg void OnUpdateWindowShowPoint(CCmdUI* pCmdUI);
+	afx_msg void OnUpdateWindowShowLine(CCmdUI* pCmdUI);
+	afx_msg void OnUpdateWindowShowRegion(CCmdUI* pCmdUI);
+	afx_msg void OnUpdatePointShowDeleted(CCmdUI* pCmdUI);
+	afx_msg void OnUpdateLineShowDeleted(CCmdUI* pCmdUI);
+	afx_msg void OnUpdateRegionShowDeleted(CCmdUI* pCmdUI);
 };
 
 #ifndef _DEBUG  // MapEditorView.cpp 中的调试版本

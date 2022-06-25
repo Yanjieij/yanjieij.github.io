@@ -54,6 +54,15 @@
     <ClInclude Include="Calculate.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="CPointParameterDlg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="CLineParameterDlg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="CRegionParameterDlg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MapEditor.cpp">
@@ -81,6 +90,15 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Calculate.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="CPointParameterDlg.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="CLineParameterDlg.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="CRegionParameterDlg.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

@@ -186,6 +186,9 @@
   <ItemGroup>
     <ClInclude Include="Calculate.h" />
     <ClInclude Include="CCreateFileDlg.h" />
+    <ClInclude Include="CLineParameterDlg.h" />
+    <ClInclude Include="CPointParameterDlg.h" />
+    <ClInclude Include="CRegionParameterDlg.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="MainFrm.h" />
     <ClInclude Include="MapEditor.h" />
@@ -201,6 +204,9 @@
   <ItemGroup>
     <ClCompile Include="Calculate.cpp" />
     <ClCompile Include="CCreateFileDlg.cpp" />
+    <ClCompile Include="CLineParameterDlg.cpp" />
+    <ClCompile Include="CPointParameterDlg.cpp" />
+    <ClCompile Include="CRegionParameterDlg.cpp" />
     <ClCompile Include="MainFrm.cpp" />
     <ClCompile Include="MapEditor.cpp" />
     <ClCompile Include="MapEditorDoc.cpp" />

@@ -40,4 +40,24 @@ void ReadLinPermanentFileToTemp(CFile* LinF, CFile* LinTmpDatF,CFile* LinTmpNdxF
 //更新线数据
 void UpdateLin( CFile * LinTmpNdxF, int nLin, LIN_NDX_STRU line);
 void UpdateLin(CFile* LinTmpNdxF, CFile* LinTmpDatF, int LinNdx, double offset_x, double offset_y);
+
+//连接两条线
+void AlterStartLin(CFile * LinTmpNdxF , long subdatOff, int nLine, int subNum);	//第一条线
+void AlterEndLin(CFile * LinTmpNdxF, int nLine);								//第二条线
+//-------------------------------区--------------------------------//
+void WriteRegNdxToFile(CFile* RegTmpNdxF, int i, REG_NDX_STRU Region);
+
+void WriteRegDatToFile(CFile* RegTmpDatF, long datOff, int i, D_DOT point);
+
+void ReadTempFileToRegNdx(CFile* RegTmpNdxF, int i, REG_NDX_STRU& RegNdx);
+
+void ReadTempFileToRegDat(CFile* RegTmpDatF, long datOff, int i, D_DOT &Pnt);
+
+void WriteTempToRegPermanentFile(CFile* RegF, CFile* RegTmpDatF, CFile* RegTmpNdxF, VERSION RegVer, int nReg, int nLReg);
+
+void ReadRegPermanentFileToTemp(CFile* RegF, CFile* RegTmpDatF, CFile* RegTmpNdxF, VERSION& RegVer, int& nReg, int& nLReg, long& TmpFRegDatOffset);
+
+//更新区信息
+void UpdateReg(CFile* RegTmpNdxF, int nReg, REG_NDX_STRU Region);
+void UpdateReg(CFile* RegTmpNdxF, CFile* RegTmpDatF, int RegNdx, double offset_x, double offset_y);
 #endif

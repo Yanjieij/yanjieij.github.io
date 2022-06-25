@@ -26,14 +26,15 @@ BEGIN_MESSAGE_MAP(CMainFrame, CFrameWndEx)
 	ON_REGISTERED_MESSAGE(AFX_WM_CREATETOOLBAR, &CMainFrame::OnToolbarCreateNew)
 	ON_COMMAND_RANGE(ID_VIEW_APPLOOK_WIN_2000, ID_VIEW_APPLOOK_WINDOWS_7, &CMainFrame::OnApplicationLook)
 	ON_UPDATE_COMMAND_UI_RANGE(ID_VIEW_APPLOOK_WIN_2000, ID_VIEW_APPLOOK_WINDOWS_7, &CMainFrame::OnUpdateApplicationLook)
+	ON_WM_TIMER()
 END_MESSAGE_MAP()
 
 static UINT indicators[] =
 {
-	ID_SEPARATOR,           // 状态行指示器
-	ID_INDICATOR_CAPS,
-	ID_INDICATOR_NUM,
-	ID_INDICATOR_SCRL,
+	ID_SEPARATOR,
+	IDS_PNTNUM,
+	IDS_LINNUM,
+	IDS_REGNUM
 };
 
 // CMainFrame 构造/析构
@@ -91,7 +92,8 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		TRACE0("未能创建状态栏\n");
 		return -1;      // 未能创建
 	}
-	m_wndStatusBar.SetIndicators(indicators, sizeof(indicators)/sizeof(UINT));
+	SetTimer(1, 100, NULL);
+	OnTimer(1);
 
 	// TODO: 如果您不希望工具栏和菜单栏可停靠，请删除这五行
 	m_wndMenuBar.EnableDocking(CBRS_ALIGN_ANY);
@@ -308,3 +310,16 @@ BOOL CMainFrame::LoadFrame(UINT nIDResource, DWORD dwDefaultStyle, CWnd* pParent
 	return TRUE;
 }
 
+void CMainFrame::OnTimer(UINT_PTR nIDEvent)
+{
+	m_wndStatusBar.SetIndicators(indicators, sizeof(indicators) / sizeof(UINT));
+	m_wndStatusBar.SetPaneInfo(0, indicators[0], SBPS_STRETCH, 100); //设置面板宽度
+	for (int n = 1; n < sizeof(indicators) / sizeof(UINT); n++)
+	{
+		m_wndStatusBar.SetPaneInfo(n, indicators[n], 0, 200); //设置面板宽度
+	}
+	m_wndStatusBar.SetPaneText(1, (LPCTSTR)getPntNum());
+	m_wndStatusBar.SetPaneText(2, (LPCTSTR)getLinNum());
+	m_wndStatusBar.SetPaneText(3, (LPCTSTR)getRegNum());
+	CFrameWndEx::OnTimer(nIDEvent);
+}
