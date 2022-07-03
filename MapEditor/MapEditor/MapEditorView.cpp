@@ -69,6 +69,7 @@ LIN_NDX_STRU GLinMMTmpNdx;							//记录选中的线的索引
 int order = -1;										//延长线时选中线的端点
 LIN_NDX_STRU GLinToAdd = GLin;						//需要延长的线
 int GnPick = -1;									//延长线的序列
+POINT GLPntToAdd = { GLPnt.x = -1, GLPnt.y = -1 };	//延长线段起点
 CString getLinNum()
 {
 	CString output = _T("线：");
@@ -160,7 +161,7 @@ D_DOT firstPoint = { 0,0 };			//选择的第一个点
 D_DOT secondPoint = { 0,0 };		//选择的第二个点
 int order1 = -1;					//所选择点的顺序，0代表在开头，1代表在结尾
 int order2 = -1;
-bool isPick = 0;
+int isPick = 0;
 
 //---------------------------窗口显示---------------------------//
 enum State{ SHOWSTATE_UNDEL, SHOWSTATE_DEL };
@@ -306,88 +307,119 @@ void CMapEditorView::OnRButtonUp(UINT /* nFlags */, CPoint point)
 				GLPnt.y = -1;
 			}
 			break;
-		}
-	}
 
-	//------------------------缩放-----------------------------//
-	if (GPntFCreated || GLinFCreated || GRegFCreated)
-	{
-		RECT client;
-		double zoom = 1.0;
-		switch (GCurOperState)
-		{
-		case OPERSTATE_ZOOM:	//缩小
-		{
-			GetClientRect(&client);
-			double x0 = point.x - (client.right / 2.0) - (client.right / 8.0);
-			double y0 = point.y - (client.bottom / 2.0) - (client.bottom / 8.0);
-			GZoomOffset_x += (x0 / GZoom);
-			GZoomOffset_y += (y0 / GZoom);
-			GZoom *= 3 / 4.0;
-			this->Invalidate();
-			break;
-		}
-		default:
-			break;
-		}
-	}
+		case OPERSTATE_LIN_ADD_DOT:
+			switch (isPick)
+			{
+				case 1:
+				{
+					DrawSeg(&dc, GLinToAdd, GLPntToAdd, point);
+					memset(&GLinToAdd, 0, sizeof(LIN_NDX_STRU));
+					GMPnt.SetPoint(-1, -1);
+					GLPnt.x = -1;
+					GLPnt.y = -1;
+					break;
+				}
+				case 2:
+				{
+					DrawSeg(&dc, GLinToAdd, GLPntToAdd, point);
+					GLinToAdd.datOff = (GTLin.dotNum * sizeof(D_DOT));
+					memset(&GLinToAdd, 0, sizeof(LIN_NDX_STRU));
+					GMPnt.SetPoint(-1, -1);
+					GLPntToAdd.x = -1;	//起点
+					GLPntToAdd.y = -1;
+					memset(&GTLin, 0, sizeof(LIN_NDX_STRU));
+					GLPnt.x = -1;
+					GLPnt.y = -1;
 
-	//--------------------------造区-----------------------------//
-	if (GRegFCreated)
-		switch (GCurOperState)
-		{
-		case OPERSTATE_INPUT_REG:
-			if (GTReg.dotNum > 2)
-			{
-				WriteRegNdxToFile(GRegTmpNdxF, GRegNum, GTReg);
-				++GRegNum;
-				++GRegLNum;
-				POINT* pt = new POINT[3];
-				D_DOT dot;
-				ReadTempFileToRegDat(GRegTmpDatF, GTReg.datOff, 0, dot);
-				PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
-				DotToPnt(pt[0], dot);
-				ReadTempFileToRegDat(GRegTmpDatF, GTReg.datOff, GTReg.dotNum - 1, dot);
-				PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
-				DotToPnt(pt[1], dot);
-				pt[2] = point;
-				DrawReg(&dc, GTReg, pt, 3);
-				delete[] pt;
-				GReg.datOff += (GTReg.dotNum * sizeof(D_DOT));
-				memset(&GTReg, 0, sizeof(REG_NDX_STRU));
-				GRegCreateMMPnt = CPoint(-1, -1);
-				GRegCreateStartPnt = CPoint(-1, -1);
+					isPick = 0;
+					GnPick = -1;
+					this->Invalidate();
+					break;
+				}
 			}
-			else if (GTReg.dotNum == 2)
-			{
-				POINT* pt = new POINT[3];
-				D_DOT dot;
-				ReadTempFileToRegDat(GRegTmpDatF, GTReg.datOff, 0, dot);
-				PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
-				DotToPnt(pt[0], dot);
-				ReadTempFileToRegDat(GRegTmpDatF, GTReg.datOff,
-					GTReg.dotNum - 1, dot);
-				PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
-				DotToPnt(pt[1], dot);
-				pt[2] = point;
-				DrawReg(&dc, GTReg, pt, 3);
-				delete[] pt;
-				memset(&GTReg, 0, sizeof(REG_NDX_STRU));
-				GRegCreateMMPnt = CPoint(-1, -1);
-				GRegCreateStartPnt = CPoint(-1, -1);
-			}
-			else if (GTReg.dotNum == 1)
-			{
-				LIN_NDX_STRU tln = { tln.pattern = GTReg.pattern, tln.color = GTReg.color };
-				DrawSeg(&dc, tln, GRegCreateStartPnt, GRegCreateMMPnt);
-				memset(&GTReg, 0, sizeof(REG_NDX_STRU));
-				GRegCreateMMPnt = CPoint(-1, -1);
-				GRegCreateStartPnt = CPoint(-1, -1);
-			}
-			break;
-		default:
-			break;
 		}
+
+		//------------------------缩放-----------------------------//
+		if (GPntFCreated || GLinFCreated || GRegFCreated)
+		{
+			RECT client;
+			double zoom = 1.0;
+			switch (GCurOperState)
+			{
+			case OPERSTATE_ZOOM:	//缩小
+			{
+				GetClientRect(&client);
+				double x0 = point.x - (client.right / 2.0) - (client.right / 8.0);
+				double y0 = point.y - (client.bottom / 2.0) - (client.bottom / 8.0);
+				GZoomOffset_x += (x0 / GZoom);
+				GZoomOffset_y += (y0 / GZoom);
+				GZoom *= 3 / 4.0;
+				this->Invalidate();
+				break;
+			}
+			default:
+				break;
+			}
+		}
+
+		//--------------------------造区-----------------------------//
+		if (GRegFCreated)
+			switch (GCurOperState)
+			{
+			case OPERSTATE_INPUT_REG:
+				if (GTReg.dotNum > 2)
+				{
+					WriteRegNdxToFile(GRegTmpNdxF, GRegNum, GTReg);
+					++GRegNum;
+					++GRegLNum;
+					POINT* pt = new POINT[3];
+					D_DOT dot;
+					ReadTempFileToRegDat(GRegTmpDatF, GTReg.datOff, 0, dot);
+					PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+					DotToPnt(pt[0], dot);
+					ReadTempFileToRegDat(GRegTmpDatF, GTReg.datOff, GTReg.dotNum - 1, dot);
+					PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+					DotToPnt(pt[1], dot);
+					pt[2] = point;
+					DrawReg(&dc, GTReg, pt, 3);
+					delete[] pt;
+					GReg.datOff += (GTReg.dotNum * sizeof(D_DOT));
+					memset(&GTReg, 0, sizeof(REG_NDX_STRU));
+					GRegCreateMMPnt = CPoint(-1, -1);
+					GRegCreateStartPnt = CPoint(-1, -1);
+				}
+				else if (GTReg.dotNum == 2)
+				{
+					POINT* pt = new POINT[3];
+					D_DOT dot;
+					ReadTempFileToRegDat(GRegTmpDatF, GTReg.datOff, 0, dot);
+					PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+					DotToPnt(pt[0], dot);
+					ReadTempFileToRegDat(GRegTmpDatF, GTReg.datOff,
+						GTReg.dotNum - 1, dot);
+					PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+					DotToPnt(pt[1], dot);
+					pt[2] = point;
+					DrawReg(&dc, GTReg, pt, 3);
+					delete[] pt;
+					memset(&GTReg, 0, sizeof(REG_NDX_STRU));
+					GRegCreateMMPnt = CPoint(-1, -1);
+					GRegCreateStartPnt = CPoint(-1, -1);
+				}
+				else if (GTReg.dotNum == 1)
+				{
+					LIN_NDX_STRU tln = { tln.pattern = GTReg.pattern, tln.color = GTReg.color };
+					DrawSeg(&dc, tln, GRegCreateStartPnt, GRegCreateMMPnt);
+					memset(&GTReg, 0, sizeof(REG_NDX_STRU));
+					GRegCreateMMPnt = CPoint(-1, -1);
+					GRegCreateStartPnt = CPoint(-1, -1);
+				}
+				break;
+			default:
+				break;
+			}
+	}
 }
 
 void CMapEditorView::OnContextMenu(CWnd* /* pWnd */, CPoint point)
@@ -434,6 +466,7 @@ void CMapEditorView::OnFileNew()
 	if (dlg.DoModal() != IDOK)	//只有在用户按下确认时才会新建临时文件
 		return;
 	CString str;
+	str += "已成功创建下列临时文件：\n";
 	if (!GPntFCreated)	//点临时文件不存在则新建
 	{
 		GPntTmpFName = dlg.m_add + CString("\\") + GPntTmpFName;	//临时点数据文件名
@@ -1902,13 +1935,12 @@ void CMapEditorView::OnLButtonUp(UINT nFlags, CPoint point)
 			}
 			break;
 
-		//线上加点
+		//延长线
 		case OPERSTATE_LIN_ADD_DOT:
 			switch(isPick)
 			{
 			case 0:
 				{
-					D_DOT dot;
 					PntToDot(dot, point);
 					PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
 					DotToPnt(point, dot);
@@ -1926,71 +1958,74 @@ void CMapEditorView::OnLButtonUp(UINT nFlags, CPoint point)
 						PntDPtoVP(pt1, GZoom, GZoomOffset_x, GZoomOffset_y);
 						dc.Ellipse((long)pt1.x - 2, (long)pt1.y - 2, (long)pt1.x + 2, (long)pt1.y + 2);
 						order1 = 0;
-						GLPnt.x = (long)pt1.x;
-						GLPnt.y = (long)pt1.y;
+						GLPntToAdd.x = (long)pt1.x;
+						GLPntToAdd.y = (long)pt1.y;
 					}
 					else
 					{
 						PntDPtoVP(pt2, GZoom, GZoomOffset_x, GZoomOffset_y);
 						dc.Ellipse((long)pt2.x - 2, (long)pt2.y - 2, (long)pt2.x + 2, (long)pt2.y + 2);
 						order1 = 1;
-						GLPnt.x = (long)pt2.x;
-						GLPnt.y = (long)pt2.y;
+						GLPntToAdd.x = (long)pt2.x;
+						GLPntToAdd.y = (long)pt2.y;
 					}
 				}
 				break;
-			case 1:
-				{
-					memcpy_s(&GTLin, sizeof(LIN_NDX_STRU), &GLin, sizeof(LIN_NDX_STRU));
-					PntToDot(dot, point);
-					PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
-					WriteLinDatToFile(GLinTmpDatF, GLin.datOff, GTLin.dotNum, dot);
-					GTLin.dotNum++;
-					PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
-					GLPnt.x = (long)dot.x;	//起点
-					GLPnt.y = (long)dot.y;
-					GLinChanged = true;
-					break;
-					
-					/*
-					D_DOT _point;
-					D_DOT clickPoint = { point.x,point.y };
-					int ndot = 0;
-					if (order == 0)
-					{
-						for (int i = GLinToAdd.dotNum - 1; i >= 0; --i)
-						{
-							ReadTempFileToLinDat(GLinTmpDatF, GLinToAdd.datOff, i, _point);
-							WriteLinDatToFile(GLinTmpDatF, GLinToAdd.datOff, ndot, _point);
-							ndot++;
-						}
-						WriteLinDatToFile(GLinTmpDatF, GLinToAdd.datOff, ndot, clickPoint);
-					}
-					else if (order == 1)
-					{
-						for (int i = 0; i < GLinToAdd.dotNum; ++i)
-						{
-							ReadTempFileToLinDat(GLinTmpDatF, GLinToAdd.datOff, i, _point);
-							WriteLinDatToFile(GLinTmpDatF, GLinToAdd.datOff, ndot, _point);
-							ndot++;
-						}
-						WriteLinDatToFile(GLinTmpDatF, GLinToAdd.datOff, ndot, clickPoint);
-					}
-					LIN_NDX_STRU LinNdx;
-					GLinTmpNdxF->Seek(GnPick * sizeof(LIN_NDX_STRU), CFile::begin);
-					GLinTmpNdxF->Read(&LinNdx, sizeof(LIN_NDX_STRU));
-					LinNdx.datOff = GnPick;						//更新点索引
-					LinNdx.dotNum = GLinToAdd.dotNum + 1;		//更新点书目
-					GLinTmpNdxF->Seek(GnPick * sizeof(LIN_NDX_STRU), CFile::begin);
-					GLinTmpNdxF->Write(&LinNdx, sizeof(LIN_NDX_STRU));
-					*/
 
-					isPick = 0;
-					GnPick = -1;
-					GLinToAdd = GLin;
-					this->Invalidate();
+			case 1:
+			{
+				PntToDot(dot, point);
+				PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+				PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+
+				D_DOT _point;
+				int ndot = 0;
+				if (order == 0)
+				{
+					for (int i = GLinToAdd.dotNum - 1; i >= 0; --i)
+					{
+						ReadTempFileToLinDat(GLinTmpDatF, GLinToAdd.datOff, i, _point);
+						WriteLinDatToFile(GLinTmpDatF, GLinToAdd.datOff, ndot, _point);
+						ndot++;
+					}
 				}
+				else if (order == 1)
+				{
+					for (int i = 0; i < GLinToAdd.dotNum; ++i)
+					{
+						ReadTempFileToLinDat(GLinTmpDatF, GLinToAdd.datOff, i, _point);
+						WriteLinDatToFile(GLinTmpDatF, GLinToAdd.datOff, ndot, _point);
+						ndot++;
+					}
+				}
+				GLPntToAdd.x = point.x;
+				GLPntToAdd.y = point.y;
+				isPick = 2;
+
+				this->Invalidate();
+			}
+
+			case 2:
+			{
+				LIN_NDX_STRU LinNdx;
+				GLinTmpNdxF->Seek(GnPick * sizeof(LIN_NDX_STRU), CFile::begin);
+				GLinTmpNdxF->Read(&LinNdx, sizeof(LIN_NDX_STRU));
+				LinNdx.datOff = GnPick;						//更新点索引
+				LinNdx.dotNum = GLinToAdd.dotNum + 1;		//更新点书目
+				GLinTmpNdxF->Seek(GnPick * sizeof(LIN_NDX_STRU), CFile::begin);
+				GLinTmpNdxF->Write(&LinNdx, sizeof(LIN_NDX_STRU));
+
+				PntToDot(dot, point);
+				PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+				WriteLinDatToFile(GLinTmpDatF, GLinToAdd.datOff, GLinToAdd.dotNum, dot);
+				GLinToAdd.dotNum++;
+				PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+				GLPntToAdd.x = (long)dot.x;	//起点
+				GLPntToAdd.y = (long)dot.y;
+				GLinChanged = true;
 				break;
+			}
+
 			default:
 				break;
 			}
@@ -2315,17 +2350,18 @@ void CMapEditorView::OnMouseMove(UINT nFlags, CPoint point)
 		switch (GCurOperState)
 		{
 		case OPERSTATE_MOVE_PNT:
-			D_DOT dot;
-			PntToDot(dot, point);
-			PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
-			DotToPnt(point, dot);
-			GTPnt = FindPnt(point, GPntNum, GPntTmpF, GPntNdx);
-			dot.x = GTPnt.x;
-			dot.y = GTPnt.y;
-			PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
-			GTPnt.x = dot.x;
-			GTPnt.y = dot.y;
+		{
+			if (GPntNdx != -1)
+			{
+				CClientDC dc(this);
+				dc.SetROP2(R2_NOTXORPEN);
+				DrawPnt(&dc, GTPnt);
+				GTPnt.x = point.x;
+				GTPnt.y = point.y;
+				DrawPnt(&dc, GTPnt);
+			}
 			break;
+		}
 		default:
 			break;
 		}
@@ -2396,17 +2432,17 @@ void CMapEditorView::OnMouseMove(UINT nFlags, CPoint point)
 			break;
 
 		case OPERSTATE_LIN_ADD_DOT:
-			if(isPick)
+			if(isPick!=0)
 			{
 				CClientDC dc(this);
 				dc.SetROP2(R2_NOTXORPEN);
 				if (GMPnt.x != -1 && GMPnt.y != -1)
-					DrawSeg(&dc, GTLin, GLPnt, GMPnt);
+					DrawSeg(&dc, GLinToAdd, GLPntToAdd, GMPnt);
 				//保存上一状态
 				GMPnt.x = point.x;
 				GMPnt.y = point.y;
 				POINT mpoint = { mpoint.x = point.x,mpoint.y = point.y };
-				DrawSeg(&dc, GTLin, GLPnt, mpoint);//连接
+				DrawSeg(&dc, GLinToAdd, GLPntToAdd, mpoint);//连接
 			}
 			break;
 		default:

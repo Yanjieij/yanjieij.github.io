@@ -9,12 +9,12 @@
   MapEditor.cpp
   MapEditorDoc.cpp
   MapEditorView.cpp
-D:\CODE\blog\yanjieij.github.io\MapEditor\MapEditor\MapEditorView.cpp(381,38): warning C4838: 从“int”转换到“char”需要收缩转换
-D:\CODE\blog\yanjieij.github.io\MapEditor\MapEditor\MapEditorView.cpp(914,37): warning C4554: “&”: 检查运算符优先级是否存在的可能的错误；使用括号阐明优先级
-D:\CODE\blog\yanjieij.github.io\MapEditor\MapEditor\MapEditorView.cpp(968,13): warning C4553: “==”: 未使用表达式结果；是否打算使用“=”?
-D:\CODE\blog\yanjieij.github.io\MapEditor\MapEditor\MapEditorView.cpp(1996,4): warning C4809: 切换语句有多余的“default”标签；给定所有可能的“case”标签
-D:\CODE\blog\yanjieij.github.io\MapEditor\MapEditor\MapEditorView.cpp(2463,38): warning C4838: 从“int”转换到“char”需要收缩转换
+D:\CODE\blog\yanjieij.github.io\MapEditor\MapEditor\MapEditorView.cpp(412,39): warning C4838: 从“int”转换到“char”需要收缩转换
+D:\CODE\blog\yanjieij.github.io\MapEditor\MapEditor\MapEditorView.cpp(947,37): warning C4554: “&”: 检查运算符优先级是否存在的可能的错误；使用括号阐明优先级
+D:\CODE\blog\yanjieij.github.io\MapEditor\MapEditor\MapEditorView.cpp(1001,13): warning C4553: “==”: 未使用表达式结果；是否打算使用“=”?
+D:\CODE\blog\yanjieij.github.io\MapEditor\MapEditor\MapEditorView.cpp(2499,38): warning C4838: 从“int”转换到“char”需要收缩转换
   paint.cpp
   WriteOrRead.cpp
   正在生成代码...
+  LINK : 没有找到 D:\CODE\blog\yanjieij.github.io\MapEditor\Debug\MapEditor.exe 或上一个增量链接没有生成它；正在执行完全链接
   MapEditor.vcxproj -> D:\CODE\blog\yanjieij.github.io\MapEditor\Debug\MapEditor.exe
