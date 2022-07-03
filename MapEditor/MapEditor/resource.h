@@ -61,9 +61,13 @@
 #define ID_32776                        32776
 #define ID_32781                        32776
 #define ID_32777                        32777
+#define ID_32782                        32777
 #define ID_32778                        32778
+#define ID_DELETE_MANY_POINT            32778
 #define ID_32779                        32779
+#define ID_32783                        32779
 #define ID_32780                        32780
+#define ID_MODIFY_MANY_POINT_PARAMETER  32780
 #define ID_WINDOW_ZOOM_OUT              32781
 #define ID_WINDOW_MOVE                  32782
 #define ID_WINDOW_RESET                 32783
@@ -144,7 +148,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        327
-#define _APS_NEXT_COMMAND_VALUE         32777
+#define _APS_NEXT_COMMAND_VALUE         32781
 #define _APS_NEXT_CONTROL_VALUE         1014
 #define _APS_NEXT_SYMED_VALUE           310
 #endif

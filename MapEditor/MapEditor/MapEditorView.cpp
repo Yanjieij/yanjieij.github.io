@@ -45,6 +45,10 @@ CString getPntNum()
 	second.Format(_T("%d"), GPntNum);
 	return output + first + '/' + second;
 }
+CPoint GDeleteLBDPnt(-1, -1);			
+CPoint GDeleteMMPnt(-1, -1);			
+CPoint GModifyLBDPnt(-1, -1);			
+CPoint GModifyMMPnt(-1, -1);			
 //-----------------------线数据的全局变量
 bool GLinFCreated = false;							//临时文件是否创建
 CString GLinFName;									//永久文件名
@@ -132,7 +136,9 @@ enum Action {
 	OPERSTATE_UNDELETE_LIN,
 	OPERSTATE_UNDELETE_REG,
 	OPERSTATE_LIN_DELETE_DOT,
-	OPERSTATE_LIN_ADD_DOT
+	OPERSTATE_LIN_ADD_DOT,
+	OPERSTATE_DELETE_MANY_POINT,
+	OPERSTATE_MODIFY_MANY_POINT
 };//枚举操作状态
 Action GCurOperState;//操作参数
 //----------------------------用于放大缩小---------------------------//
@@ -228,6 +234,8 @@ BEGIN_MESSAGE_MAP(CMapEditorView, CView)
 	ON_UPDATE_COMMAND_UI(ID_POINT_SHOW_DELETED, &CMapEditorView::OnUpdatePointShowDeleted)
 	ON_UPDATE_COMMAND_UI(ID_LINE_SHOW_DELETED, &CMapEditorView::OnUpdateLineShowDeleted)
 	ON_UPDATE_COMMAND_UI(ID_REGION_SHOW_DELETED, &CMapEditorView::OnUpdateRegionShowDeleted)
+	ON_COMMAND(ID_DELETE_MANY_POINT, &CMapEditorView::OnDeleteManyPoint)
+	ON_COMMAND(ID_MODIFY_MANY_POINT_PARAMETER, &CMapEditorView::OnModifyManyPointParameter)
 END_MESSAGE_MAP()
 
 
@@ -323,7 +331,7 @@ void CMapEditorView::OnRButtonUp(UINT /* nFlags */, CPoint point)
 				case 2:
 				{
 					DrawSeg(&dc, GLinToAdd, GLPntToAdd, point);
-					GLinToAdd.datOff = (GTLin.dotNum * sizeof(D_DOT));
+					GLin.datOff = (GLinToAdd.dotNum * sizeof(D_DOT));
 					memset(&GLinToAdd, 0, sizeof(LIN_NDX_STRU));
 					GMPnt.SetPoint(-1, -1);
 					GLPntToAdd.x = -1;	//起点
@@ -1255,6 +1263,19 @@ void CMapEditorView::OnPointDelete()
 	GShowLin = true;
 }
 
+void CMapEditorView::OnDeleteManyPoint()
+{
+	if (GPntFCreated)
+		GCurOperState = OPERSTATE_DELETE_MANY_POINT;	//将状态改为删除
+	else
+		MessageBox(L"还没有创建文件！", L"提示", MB_OK);
+
+	GCurShowState = SHOWSTATE_UNDEL;
+	this->Invalidate();
+	GShowPnt = true;
+	GShowReg = true;
+	GShowLin = true;
+}
 
 void CMapEditorView::OnPointShowDeleted()
 {
@@ -1313,7 +1334,7 @@ void CMapEditorView::OnPointModifyParameter()
 		this->Invalidate();
 	}
 	else
-		MessageBox(L"File have not been created. ", L"Message", MB_OK);
+		MessageBox(L"还没有创建文件！ ", L"提示", MB_OK);
 }
 
 
@@ -1329,6 +1350,24 @@ void CMapEditorView::OnPointSetDefparameter()
 		memcpy_s(&GPnt.color, sizeof(COLORREF), &tempColor, sizeof(COLORREF));
 	}
 }
+
+
+void CMapEditorView::OnModifyManyPointParameter()
+{
+
+	if (GPntFCreated)
+	{
+		GCurOperState = OPERSTATE_MODIFY_MANY_POINT;
+		GCurShowState = SHOWSTATE_UNDEL;
+		GShowPnt = true;
+		GShowLin = false;
+		GShowReg = false;
+		this->Invalidate();
+	}
+	else
+		MessageBox(L"还没有创建文件！ ", L"提示", MB_OK);
+}
+
 
 void CMapEditorView::OnLineCreate()
 {
@@ -1651,24 +1690,101 @@ void CMapEditorView::OnLButtonUp(UINT nFlags, CPoint point)
 			}
 			break;
 
+		case OPERSTATE_DELETE_MANY_POINT:
+		{
+			PntToDot(dot, point);
+			PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+			DotToPnt(point, dot);
+			double minX = min(point.x, GDeleteLBDPnt.x);
+			double minY = min(point.y, GDeleteLBDPnt.y);
+			double maxX = max(point.x, GDeleteLBDPnt.x);
+			double maxY = max(point.y, GDeleteLBDPnt.y);
+			PNT_STRU _point;
+			for (int i = 0; i < GPntNum; i++)
+			{
+				ReadTempFileToPnt(GPntTmpF, i, _point);
+				if (_point.isDel == 1)
+					continue;
+				if (_point.x<maxX && _point.x>minX && _point.y > minY && _point.y < maxY)
+				{
+					_point.isDel = 1;								//标记删除
+					UpdatePnt(GPntTmpF, i, _point);
+					dot.x = _point.x;
+					dot.y = _point.y;
+					PntDPtoVP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+					_point.x = dot.x;
+					_point.y = dot.y;
+					DrawPnt(&dc, _point);							//重绘以清除
+					GPntNdx = -1;
+					GPntChanged = true;
+					GPntLNum--;
+				}
+			}
+			GDeleteLBDPnt = CPoint(-1, -1);
+			GDeleteMMPnt = CPoint(-1, -1);
+			this->Invalidate();
+			break;
+		}
+
+		case OPERSTATE_MODIFY_MANY_POINT:
+		{
+			PntToDot(dot, point);
+			PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
+			DotToPnt(point, dot);
+			double minX = min(point.x, GModifyLBDPnt.x);
+			double minY = min(point.y, GModifyLBDPnt.y);
+			double maxX = max(point.x, GModifyLBDPnt.x);
+			double maxY = max(point.y, GModifyLBDPnt.y);
+
+			PNT_STRU tempPoint = GPnt;
+			CPointParameterDlg dlg;
+			dlg.m_ColorButton.SetColor(tempPoint.color);
+			dlg.m_Pattern = tempPoint.pattern;
+			if (IDOK == dlg.DoModal())
+			{
+				COLORREF tempColor = dlg.m_ColorButton.GetColor();
+				for (int i = 0; i < GPntNum; i++)
+				{
+					ReadTempFileToPnt(GPntTmpF, i, tempPoint);
+					if (tempPoint.isDel == 1)
+						continue;
+					if (tempPoint.x<maxX && tempPoint.x>minX && tempPoint.y > minY && tempPoint.y < maxY)
+					{
+						memcpy_s(&tempPoint.color, sizeof(COLORREF), &tempColor, sizeof(COLORREF));
+						tempPoint.pattern = dlg.m_Pattern;
+						GPntTmpF->Seek(i * sizeof(PNT_STRU), CFile::begin);
+						GPntTmpF->Write(&tempPoint, sizeof(PNT_STRU));
+					}
+				}
+			}
+
+			GModifyLBDPnt = CPoint(-1, -1);
+			GModifyMMPnt = CPoint(-1, -1);
+			this->Invalidate();
+			break;
+		}
+
 		//移动点
 		case OPERSTATE_MOVE_PNT:
+		{
 			if (GPntNdx != -1)
 			{
 				PNT_STRU pnt;
-				ReadTempFileToPnt(GPntTmpF, GPntNdx, pnt); 
+				ReadTempFileToPnt(GPntTmpF, GPntNdx, pnt);
 				pnt.x = point.x;
-				pnt.y = point.y; 
+				pnt.y = point.y;
 				UpdatePnt(GPntTmpF, GPntNdx, pnt);		 //更新数据
 				GPntNdx = -1;
-				GPntChanged = true; 
+				GPntChanged = true;
 			}
 			break;
+		}
 
 		//恢复点
 		case OPERSTATE_UNDELETE_PNT : 
+		{
 			PntToDot(dot, point);
-			PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y); 
+			PntVPtoDP(dot, GZoom, GZoomOffset_x, GZoomOffset_y);
 			DotToPnt(point, dot);
 			FindDeletePnt(point, GPntNum, GPntTmpF, GPntNdx); //找到最近的删除点
 			if (GPntNdx != -1)
@@ -1688,6 +1804,7 @@ void CMapEditorView::OnLButtonUp(UINT nFlags, CPoint point)
 				GPntLNum++;
 			}
 			break;
+		}
 
 		//修改点参数
 		case OPERSTATE_MODIFY_POINT_PARAMETER: 
@@ -1844,21 +1961,17 @@ void CMapEditorView::OnLButtonUp(UINT nFlags, CPoint point)
 					}
 					else if (GnLine == 2)
 					{	//选中第二个端点
-						D_DOT pt1;
-						D_DOT pt2;
-						ReadTempFileToLinDat(GLinTmpDatF, GStartLin.datOff, 0, pt1);
-						ReadTempFileToLinDat(GLinTmpDatF, GStartLin.datOff, GStartLin.dotNum - 1, pt2);
+						ReadTempFileToLinDat(GLinTmpDatF, GEndLin.datOff, 0, pt1);
+						ReadTempFileToLinDat(GLinTmpDatF, GEndLin.datOff, GEndLin.dotNum - 1, pt2);
 						if (Distance(point.x, point.y, pt1.x, pt1.y) < Distance(point.x, point.y, pt2.x, pt2.y))
 						{
 							PntDPtoVP(pt1, GZoom, GZoomOffset_x, GZoomOffset_y);
-							dc.Ellipse((long)pt1.x - 2, (long)pt1.y - 2, (long)pt1.x + 2, (long)pt1.y + 2);
 							secondPoint = pt1;
 							order2 = 0;
 						}
 						else
 						{
 							PntDPtoVP(pt2, GZoom, GZoomOffset_x, GZoomOffset_y);
-							dc.Ellipse((long)pt2.x - 2, (long)pt2.y - 2, (long)pt2.x + 2, (long)pt2.y + 2);
 							secondPoint = pt2;
 							order2 = 1;
 						}
@@ -1866,13 +1979,21 @@ void CMapEditorView::OnLButtonUp(UINT nFlags, CPoint point)
 						AlterLindot(GLinTmpDatF, GStartLin, GEndLin, firstPoint, secondPoint, GLin.datOff, order1, order2);
 						AlterStartLin(GLinTmpNdxF, GLin.datOff, GnStart, GStartLin.dotNum + GEndLin.dotNum);
 						AlterEndLin(GLinTmpNdxF, GnEnd);
+
 						GLin.datOff += (GStartLin.dotNum + GEndLin.dotNum) * sizeof(D_DOT);
+						order1 = -1;
+						order2 = -1;
 						GnLine = 0;
+						GLinNum--;
 						GLinLNum--;
 						GLinChanged = true;
 						GnStart = -1;
 						GnEnd = -1;
 						GLinNdx = -1;
+						GStartLin = GLin;
+						GEndLin = GLin;
+						firstPoint = { 0,0 };
+						secondPoint = { 0,0 };
 						this->Invalidate();
 					}
 				}
@@ -2228,6 +2349,14 @@ void CMapEditorView::OnLButtonDown(UINT nFlags, CPoint point)
 		case OPERSTATE_MOVE_PNT:	//如果需要移动
 			GTPnt = FindPnt(point, GPntNum, GPntTmpF, GPntNdx);
 			break;
+		case OPERSTATE_DELETE_MANY_POINT:
+			GDeleteLBDPnt = point;
+			GDeleteMMPnt = point;
+			break;
+		case OPERSTATE_MODIFY_MANY_POINT:
+			GModifyLBDPnt = point;
+			GModifyMMPnt = point;
+			break;
 		default:
 			break;
 		}
@@ -2362,6 +2491,38 @@ void CMapEditorView::OnMouseMove(UINT nFlags, CPoint point)
 			}
 			break;
 		}
+		case OPERSTATE_DELETE_MANY_POINT:
+		{
+			if (GDeleteMMPnt.x != -1 && GDeleteMMPnt.y != -1)
+			{
+				CClientDC dc(this);
+				CPen pen(PS_DOT, 1, RGB(0, 0, 0));
+				CPen* oldPen = dc.SelectObject(&pen);
+				dc.SetROP2(R2_NOTXORPEN);
+				dc.Rectangle(GDeleteLBDPnt.x, GDeleteLBDPnt.y, GDeleteMMPnt.x, GDeleteMMPnt.y);
+				dc.Rectangle(GDeleteLBDPnt.x, GDeleteLBDPnt.y, point.x, point.y);
+				GDeleteMMPnt = point;
+				dc.SelectObject(oldPen);
+			}
+			break;
+		}
+
+		case OPERSTATE_MODIFY_MANY_POINT:
+		{
+			if (GModifyMMPnt.x != -1 && GModifyMMPnt.y != -1)
+			{
+				CClientDC dc(this);
+				CPen pen(PS_DOT, 1, RGB(0, 0, 0));
+				CPen* oldPen = dc.SelectObject(&pen);
+				dc.SetROP2(R2_NOTXORPEN);
+				dc.Rectangle(GModifyLBDPnt.x, GModifyLBDPnt.y, GModifyMMPnt.x, GModifyMMPnt.y);
+				dc.Rectangle(GModifyLBDPnt.x, GModifyLBDPnt.y, point.x, point.y);
+				GModifyMMPnt = point;
+				dc.SelectObject(oldPen);
+			}
+			break;
+		}
+
 		default:
 			break;
 		}
