@@ -5,9 +5,9 @@ using namespace std;
 
 struct Node								
 {
-	int cityID;
-	Node* lcity, * rcity;
-	int ldist, rdist;
+	int cityID = -1;
+	Node* lcity = nullptr, * rcity = nullptr;
+	int ldist = -1 , rdist = -1;
 };
 
 //寻找start子树中除了partner以外的叶节点，存入results
@@ -128,7 +128,7 @@ int main()
 		while (current != -1)
 		{
 			current = route_set[current];
-			searchOtherLeaves(city_list[current], current, &border_matched);
+			searchOtherLeaves(city_list[current], _id, &border_matched);
 			if (!border_matched.empty())
 			{
 				for (int x = 0; x < border_matched.size(); x++)
@@ -146,10 +146,11 @@ int main()
 
 		//在找到的路线中，对每条都计算距current最近军队移动到current需要的时间，取最小值
 		int bestLength = 0, _current = 0;
-		for (int cnt = 0; cnt < border_matched.size(); cnt++)
+		for (int cnt = 0, last_modify_city = -1; cnt < border_matched.size(); cnt++)
 		{
 			int length = 0, ex_armed_city = -1;
 			_current = border_matched[cnt];
+			int current_arm_city = _current;
 			while (route_set[_current] != current)
 			{
 				if (army_list[_current] != 0)
@@ -166,10 +167,16 @@ int main()
 				ex_armed_city = _current;
 			}
 			length += length_list[_current];
-			army_list[ex_armed_city]--;
 
 			if (cnt == 0 || length < bestLength)
+			{
 				bestLength = length;
+				army_list[current_arm_city]--;
+				//把上个路径的军队数恢复
+				if (last_modify_city != -1)
+					army_list[last_modify_city]++;
+				last_modify_city = current_arm_city;
+			}
 		}
 
 		//如果军队需要跨过首都，那这是特殊情况，需要额外增加一段距离
@@ -203,7 +210,10 @@ int main()
 				__current = route_set[__current];
 			}
 			if (!army_route[_id])
+			{
 				border_to_arm.push_back(_id);
+				i--;
+			}
 		}
 		//问题已经解决，退出循环
 		if (border_to_arm.empty())
@@ -211,10 +221,15 @@ int main()
 		border_matched.clear();
 	}
 
+	cout << '\n' << "需要的时间为：" << time_need << endl;
+	cout << "现在的军队分布为：" << endl;
+	for (int i = 0; i < city_num; i++)
+		cout << i << " city has " << army_list[i] << " troops" << endl;
+
 	delete[] route_set, army_list, army_route ,length_list;
 	for (int i = 0; i < city_num; i++)
 		delete city_list[i];
 	delete[] city_list;
 
-	return time_need;
+	return 0;
 }
