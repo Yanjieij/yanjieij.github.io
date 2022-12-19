@@ -1,6 +1,6 @@
 # This-> A Storehouse Keeping My History Code
 ## Codes that have already been stored:
-mine_sweeping.cpp	->	a simple classic game:)
+CPP	->	a simple classic game: mine-sweeping
 
 Composing Principle	->	mini complier and mini CPU
 
