@@ -103,7 +103,7 @@ int main()
 	int* army_route = new int[city_num] {-1};
 
 	//统计后，找到路线上没有军队的边境城市
-	vector<int> border_to_arm, border_matched;
+	vector<int> border_to_arm;
 	for (int i = 0; i < border.size(); i++)
 	{
 		int _id = border[i];
@@ -117,18 +117,21 @@ int main()
 			border_to_arm.push_back(_id);
 	}
 
+	//路线上有军队的的边境城市
+	vector<int> border_matched;
+
 	//对每个需要军队的边境城市进行军队调整
 	int time_need = 0;
 	for (int i = 0; i < border_to_arm.size(); i++)
 	{
 		int _id = border_to_arm[i];
-		int current = _id;
+		int city_army_to = _id;
 
 		//对当前边境城市，寻找最近的有军队的路线，其对应子树的根为current
-		while (current != -1)
+		while (city_army_to != -1)
 		{
-			current = route_set[current];
-			searchOtherLeaves(city_list[current], _id, &border_matched);
+			city_army_to = route_set[city_army_to];
+			searchOtherLeaves(city_list[city_army_to], _id, &border_matched);
 			if (!border_matched.empty())
 			{
 				for (int x = 0; x < border_matched.size(); x++)
@@ -144,51 +147,46 @@ int main()
 			}
 		}
 
-		//在找到的路线中，对每条都计算距current最近军队移动到current需要的时间，取最小值
-		int bestLength = 0, _current = 0;
-		for (int cnt = 0, last_modify_city = -1; cnt < border_matched.size(); cnt++)
+		//在找到的路线中，对每条都计算距city_army_move_to最近军队移动到其需要的时间，取最小值
+		int bestLength = 0, current = 0;
+		for (int cnt = 0, last_city_modified = -1; cnt < border_matched.size(); cnt++)
 		{
-			int length = 0, ex_armed_city = -1;
-			_current = border_matched[cnt];
-			int current_arm_city = _current;
-			while (route_set[_current] != current)
+			int current_length = 0;
+			current = border_matched[cnt];
+			int city_army_from = current;
+			while (route_set[current] != city_army_to)
 			{
-				if (army_list[_current] != 0)
-				{
-					length = 0;
-					ex_armed_city = _current;
-				}
-				length += length_list[_current];
-				_current = route_set[_current];
+				if (army_list[current] != 0)
+					current_length = 0;
+				current_length += length_list[current];
+				current = route_set[current];
 			}
-			if (army_list[_current] != 0)
-			{
-				length = 0;
-				ex_armed_city = _current;
-			}
-			length += length_list[_current];
+			if (army_list[current] != 0)
+				current_length = 0;
 
-			if (cnt == 0 || length < bestLength)
+			current_length += length_list[current];
+
+			if (cnt == 0 || current_length < bestLength)
 			{
-				bestLength = length;
-				army_list[current_arm_city]--;
+				bestLength = current_length;
+				army_list[city_army_from]--;
 				//把上个路径的军队数恢复
-				if (last_modify_city != -1)
-					army_list[last_modify_city]++;
-				last_modify_city = current_arm_city;
+				if (last_city_modified != -1)
+					army_list[last_city_modified]++;
+				last_city_modified = city_army_from;
 			}
 		}
 
 		//如果军队需要跨过首都，那这是特殊情况，需要额外增加一段距离
-		if (current == 0)
+		if (city_army_to == 0)
 		{
-			int city_to_arm = ((city_list[0]->lcity->cityID == _current) ? city_list[0]->rcity->cityID : city_list[0]->lcity->cityID);
+			int city_to_arm = ((city_list[0]->lcity->cityID == current) ? city_list[0]->rcity->cityID : city_list[0]->lcity->cityID);
 			bestLength += length_list[city_to_arm];
 			army_list[city_to_arm]++;
 		}
 		else
 		{
-			army_list[current]++;
+			army_list[city_army_to]++;
 		}
 
 		//在所有调整中取最长时间
@@ -202,12 +200,12 @@ int main()
 		for (int z = 0; z < border.size(); z++)
 		{
 			int _id = border[z];
-			int __current = _id;
+			int current = _id;
 			army_route[_id] = 0;
-			while (__current != -1)
+			while (current != -1)
 			{
-				army_route[_id] += army_list[__current];
-				__current = route_set[__current];
+				army_route[_id] += army_list[current];
+				current = route_set[current];
 			}
 			if (!army_route[_id])
 			{
