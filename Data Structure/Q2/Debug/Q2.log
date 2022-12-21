@@ -1,7 +1,20 @@
 ﻿  main.cpp
-C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(107,20): warning C4018: “<”: 有符号/无符号不匹配
-C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(125,20): warning C4018: “<”: 有符号/无符号不匹配
-C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(137,23): warning C4018: “<”: 有符号/无符号不匹配
-C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(152,50): warning C4018: “<”: 有符号/无符号不匹配
-C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(200,21): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(17,22): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(34,20): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(73,20): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(78,20): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(99,21): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(112,21): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(118,22): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(133,22): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(135,23): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(148,22): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(154,22): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(163,21): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(165,22): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(180,21): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(186,26): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(196,27): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(217,20): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Q2\main.cpp(36): warning C4715: “armyCalcu”: 不是所有的控件路径都返回值
   Q2.vcxproj -> C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\Data Structure\Debug\Q2.exe
