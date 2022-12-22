@@ -1,37 +1,65 @@
-#include<iostream>
 #include<fstream>
 #include"Graph.h"
+
 using namespace std;
-string MC1[201],MC2[201];
-AGraph G;
+
 int main()
 {
-	ifstream infile1,infile2;
-	infile1.open("MC1.csv", ios::in);
-	infile2.open("MC2.csv", ios::in);
-	if (!infile1||!infile2)
+	string* input_matrix_dist = new string[40];
+	string* input_matrix_adj = new string[40];
+
+	ifstream file_1,file_2;
+	file_1.open("input_dist.csv", ios::in);
+	file_2.open("input_adj.csv", ios::in);
+
+	if (!file_1||!file_2)
 	{
 		cout << "文件打开失败！" << endl;
 		return 0;
 	}
-	int lines1 = 0, lines2 = 0;
-	while (!infile1.eof())
+
+	int line_1 = 0, line_2 = 0;
+
+	while (!file_1.eof())
 	{
-		infile1 >> MC1[lines1++];
+		file_1 >> input_matrix_dist[line_1++];
 	}
-	while (!infile2.eof())
+	while (!file_2.eof())
 	{
-		infile2 >> MC2[lines2++];
+		file_2 >> input_matrix_adj[line_2++];
 	}
-	G.build_by_matrix_csv(MC1, MC2, lines1, lines2);
-	G.floyd();
-	G.outputdis();
-	cout << "--------------------------------------------------------------------" << endl;
-	for (int i = 1; i <= lines1; ++i) G.dijkstra(i,0);
-	G.outputdis();
-	G.the_shortest_path_not_pass_one_city(1, 23, 12);
-	G.BFS_from_WuHan();
-	G.paths_less_than_k_nodes(1,23,5);
-	G.the_kth_shortest_pth(1, 23, 5);
+
+	myGraph Graph;
+
+	Graph.created_by_csv(input_matrix_dist, input_matrix_adj, line_1, line_2);
+
+	Graph.BFS_from_WuHan();
+
+	Graph.Floyd();
+	//Graph.printMinDist();
+
+	cout << "\n";
+
+	for (int i = 1; i <= line_1; ++i) 
+		Graph.Dijkstra(i);
+	Graph.printMinDist();
+
+	Graph.printCityList();
+	cout << "请输入出发地，目的地，需要绕过的城市" << endl;
+	int from, to, avoid = 0;
+	cin >> from >> to >> avoid;
+	Graph.find_path_with_avoid(from, to, avoid);
+
+	int limit = 10;
+	cout << "请输入出发地，目的地，节点限制" << endl;
+	cin >> from >> to >> limit;
+	Graph.find_path_with_limit(from, to, limit);
+
+	int num = 1;
+	cout << "请输入出发地，目的地，第几长度" << endl;
+	cin >> from >> to >> num;
+	Graph.the_kth_shortest_pth(from, to, num);
+
+	delete[] input_matrix_dist, input_matrix_adj;
 	return 0;
 }
