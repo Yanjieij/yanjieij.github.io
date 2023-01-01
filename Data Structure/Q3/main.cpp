@@ -35,13 +35,11 @@ int main()
 
 	Graph.BFS_from_WuHan();
 
-	Graph.Floyd();
-	//Graph.printMinDist();
-
-	cout << "\n";
-
 	for (int i = 1; i <= line_1; ++i) 
 		Graph.Dijkstra(i);
+	Graph.printMinDist();
+
+	Graph.Floyd();
 	Graph.printMinDist();
 
 	Graph.printCityList();
@@ -58,7 +56,7 @@ int main()
 	int num = 1;
 	cout << "请输入出发地，目的地，第几长度" << endl;
 	cin >> from >> to >> num;
-	Graph.the_kth_shortest_pth(from, to, num);
+	Graph.find_Nth_shortest_path(from, to, num);
 
 	delete[] input_matrix_dist, input_matrix_adj;
 	return 0;

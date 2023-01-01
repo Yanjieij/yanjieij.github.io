@@ -130,15 +130,20 @@ bool LinkedList<T>::Insert(T aim_val, T new_val)
 template <typename T>
 void LinkedList<T>::showAllVal(bool flag)
 {
+	int _length = 0;
 	if (!flag)
-		current = first;
-	else
-		current = sec_first;
-
-	for (int i = 0; i < length; i++)
 	{
-		if (current->next == nullptr)
-			break;
+		_length = length;
+		current = first;
+	}
+	else
+	{
+		_length = sec_length;
+		current = sec_first;
+	}
+
+	while (current != nullptr)
+	{
 		cout << current->data << " ";
 		current = current->next;
 	}

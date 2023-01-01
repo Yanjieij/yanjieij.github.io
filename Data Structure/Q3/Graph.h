@@ -10,8 +10,10 @@
 
 using namespace std;
 
-int visit[MAX_NODE_NUM] = { 0 };
+int visit[MAX_NODE_NUM * MAX_NODE_NUM] = { 0 };
 int cnt;
+int status_dest;
+int min_dist[MAX_NODE_NUM][MAX_NODE_NUM] = { 0 };
 
 struct Edge 
 {
@@ -22,16 +24,13 @@ struct Node
 {
 	int id, dist, headNode_id;
 	string name;
+
 	Node()
 	{
 		id = -1;
 		headNode_id = 0;
 		dist = 0;
 		name = "";
-	}
-	bool operator < (const Node& aa) const
-	{
-		return aa.dist < dist;
 	}
 	Node(int _id, int _dist)
 	{
@@ -40,11 +39,16 @@ struct Node
 		headNode_id = 0;
 		name = "";
 	}
+
+	bool operator < (const Node& aa) const
+	{
+		return aa.dist < dist;
+	}
 };
 
 struct path
 {
-	int pre[202];
+	int pre[MAX_NODE_NUM];
 	int size;
 	int dist;
 	bool operator < (const path& a) const
@@ -56,19 +60,18 @@ struct path
 		return dist > a.dist;
 	}
 
-}pth[MAX_NODE_NUM * MAX_NODE_NUM];
+}path_dfs[MAX_NODE_NUM * MAX_NODE_NUM * 40];
 
-struct status
+struct mid_Node
 {
-	int node, dis, priority;
-	status() :node(0), dis(0), priority(0) {}
-	status(int node, int dis, int dissum) :node(node), dis(dis), priority(dissum) {}
-	bool operator < (status b) const
+	int node, dist;
+	mid_Node() :node(0), dist(0) { ; }
+	mid_Node(int node, int dis) :node(node), dist(dis) { ; }
+	bool operator < (mid_Node b) const
 	{
-		return priority > b.priority;
+		return dist + min_dist[status_dest][node] > b.dist + min_dist[status_dest][b.node];
 	}
 };
-
 
 class myGraph
 {
@@ -78,7 +81,6 @@ private:
 	Edge* edge_arr;
 	bool edge_matrix[MAX_NODE_NUM][MAX_NODE_NUM] = { 0 };
 	int dist_matrix[MAX_NODE_NUM][MAX_NODE_NUM] = { 0 };
-	int min_dist[MAX_NODE_NUM][MAX_NODE_NUM] = { 0 };
 public:
 	myGraph()
 	{
@@ -101,7 +103,7 @@ public:
 	int find_path_with_avoid(int from, int to, int avoid);
 	void find_path_with_limit(int a,int b,int k);
 	void DFS(stack<int>& st, int now,int b, int limit, int dis);
-	void the_kth_shortest_pth(int a, int b, int k);
+	void find_Nth_shortest_path(int a, int b, int k);
 };
 
 void myGraph::addEdge(int from, int to, int dist)
@@ -311,10 +313,10 @@ int myGraph::find_path_with_avoid(int from, int to, int avoid)
 void myGraph::BFS_from_WuHan()
 {
 	queue<int> q;
-	int vis[101] = { 0 };
+	int dist[MAX_NODE_NUM] = { 0 };
 
 	q.push(23);
-	vis[23] = 1;
+	dist[23] = 1;
 
 	int cnt = 0;
 	while (!q.empty())
@@ -324,9 +326,14 @@ void myGraph::BFS_from_WuHan()
 		for (int i = node_arr[current].headNode_id; i; i = edge_arr[i].next)
 		{
 			int to = edge_arr[i].to;
-			if (vis[to]) 
+			if (dist[to])
+			{
+				if (dist[to] > dist[current] + 1)
+					dist[to] = dist[current] + 1;
 				continue;
-			vis[to] = vis[current] + 1;
+			}
+			dist[to] = dist[current] + 1;
+			q.push(to);
 		}
 	}
 	Node p[MAX_NODE_NUM];
@@ -334,7 +341,7 @@ void myGraph::BFS_from_WuHan()
 	{
 		if (i == 27 || i == 29 || i == 33 || i == 34) 
 			continue;
-		if (vis[i] > 2)
+		if (dist[i] > 4)
 		{
 			++cnt;
 			p[cnt] = node_arr[i];
@@ -344,57 +351,22 @@ void myGraph::BFS_from_WuHan()
 	cout << endl;
 }
 
-void myGraph::the_kth_shortest_pth(int from, int to, int num)
+void myGraph::DFS(stack<int>& s, int current, int dest, int limit, int dis)
 {
-	Dijkstra(to);
-
-	memset(visit, 0, sizeof(visit));
-
-	priority_queue<status> q;
-
-	if (min_dist[to][from] == NaN)
-	{
-		cout << "两座城市不连通" << endl;
-		return;
-	}
-
-	q.push(status(from, 0, min_dist[to][from]));
-	while (!q.empty())
-	{
-		status tmp = q.top();
-		q.pop();
-		visit[tmp.node]++;
-		if (tmp.node == to && visit[tmp.node] == num)
-		{
-			cout << node_arr[from].name << "到" << node_arr[to].name << "的第" << num << "短路长度为:" << tmp.dis << endl;
-			return;
-		}
-		for (int i = node_arr[tmp.node].headNode_id; i; i = edge_arr[i].next)
-		{
-			int to = edge_arr[i].to;
-			if (visit[to] < num)
-				q.push(status(to, tmp.dis + edge_arr[i].dist, min_dist[to][to] + tmp.dis + edge_arr[i].dist));
-		}
-	}
-	return;
-}
-
-void myGraph::DFS(stack<int>& s, int current, int to, int limit, int dis)
-{
-	if (current == to)
+	if (current == dest)
 	{
 		stack<int> p;
-		pth[++cnt].dist = dis;
-		pth[cnt].size = (int)s.size();
+		path_dfs[++cnt].dist = dis;
+		path_dfs[cnt].size = (int)s.size();
 
 		while (!s.empty())
 		{
 			p.push(s.top());
 			s.pop();
 		}
-		for (int i = 1; i <= pth[cnt].size; ++i)
+		for (int i = 1; i <= path_dfs[cnt].size; ++i)
 		{
-			pth[cnt].pre[i] = p.top();
+			path_dfs[cnt].pre[i] = p.top();
 			s.push(p.top());
 			p.pop();
 		}
@@ -403,38 +375,38 @@ void myGraph::DFS(stack<int>& s, int current, int to, int limit, int dis)
 
 	for (int i = node_arr[current].headNode_id; i; i = edge_arr[i].next)
 	{
-		int to = edge_arr[i].to;
 		if (visit[i])
 			continue;
 		visit[i] = 1;
+		int to = edge_arr[i].to;
 		if (s.size() < limit)
 		{
 			s.push(to);
-			DFS(s, to, to, limit, dis + edge_arr[i].dist);
+			DFS(s, to, dest, limit, dis + edge_arr[i].dist);
 			s.pop();
 		}
 		visit[i] = 0;
 	}
 }
 
-void quick_sort_path(int l, int r)
+void qsort_path(int l, int r)
 {
 	int mid = (l + r) >> 1;
 	int i = 1; int j = r;
 	do {
-		while (pth[i] < pth[mid])
+		while (path_dfs[i] < path_dfs[mid])
 			++i;
-		while (pth[j] > pth[mid])
+		while (path_dfs[j] > path_dfs[mid])
 			--j;
 		if (i <= j)
 		{
-			swap(pth[i], pth[j]);
+			swap(path_dfs[i], path_dfs[j]);
 			++i;
 			--j;
 		}
 	} while (i <= j);
-	if (l < j) quick_sort_path(l, j);
-	if (i < r) quick_sort_path(i, r);
+	if (l < j) qsort_path(l, j);
+	if (i < r) qsort_path(i, r);
 }
 
 
@@ -447,27 +419,65 @@ void myGraph::find_path_with_limit(int from, int to, int limit)
 		return;
 	}
 
- 	int cnt = 0;
-	memset(pth, 0, sizeof(pth));
+ 	cnt = 0;
+	memset(path_dfs, 0, sizeof(path_dfs));
 	memset(visit, 0, sizeof(visit));
 
 	stack<int> Stack;
 	Stack.push(from);
 	visit[from] = 1;
 
-	DFS(Stack, from, to, limit+2, 0);
+	DFS(Stack, from, to, limit, 0);
 
-	quick_sort_path(1, cnt);
+	qsort_path(1, cnt);
 
 	writeFile << "从" << node_arr[from].name << "途径少于" << limit << "个城市到达" << node_arr[to].name << "有" << cnt << "种方案" << endl;
 	writeFile << "分别是" << endl;
 	for (int i = 1; i <= cnt; ++i)
 	{
-		for (int j = 1; j <= pth[i].size; ++j)
+		for (int j = 1; j <= path_dfs[i].size; ++j)
 		{
-			writeFile << node_arr[pth[i].pre[j]].name;
-			if (j != pth[i].size) writeFile << '-';
+			writeFile << node_arr[path_dfs[i].pre[j]].name;
+			if (j != path_dfs[i].size) 
+				writeFile << '-';
 		}
-		writeFile << "总长度:" << pth[i].dist << endl;
+		writeFile << "总长度:" << path_dfs[i].dist << endl;
 	}
+}
+
+void myGraph::find_Nth_shortest_path(int from, int to, int N)
+{
+	//Dijkstra(to);
+
+	memset(visit, 0, sizeof(visit));
+
+	priority_queue<mid_Node> q;
+
+	if (min_dist[to][from] == NaN)
+	{
+		cout << "两座城市不连通" << endl;
+		return;
+	}
+
+	status_dest = to;
+	q.push(mid_Node(from, 0));
+
+	while (!q.empty())
+	{
+		mid_Node temp = q.top();
+		q.pop();
+		visit[temp.node]++;
+		if (temp.node == to && visit[temp.node] == N)
+		{
+			cout << node_arr[from].name << "到" << node_arr[to].name << "的第" << N << "短路长度为:" << temp.dist << endl;
+			return;
+		}
+		for (int i = node_arr[temp.node].headNode_id; i; i = edge_arr[i].next)
+		{
+			int to = edge_arr[i].to;
+			if (visit[to] < N)
+				q.push(mid_Node(to, temp.dist + edge_arr[i].dist));
+		}
+	}
+	return;
 }

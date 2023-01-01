@@ -1,1 +1,7 @@
-﻿  Q1.vcxproj -> D:\OneDrive\code\cpp\郭延铎—数据结构课程设计\Debug\Q1.exe
+﻿  main.cpp
+D:\CODE\Data Structure\Q1\LinkedList.cpp(299,34): warning C4244: “参数”: 从“double”转换到“int”，可能丢失数据
+D:\CODE\Data Structure\Q1\LinkedList.cpp(269): message : 在编译 类 模板 成员函数“Node<int> *LinkedList<int>::crossDetect(void)”时
+D:\CODE\Data Structure\Q1\main.cpp(23): message : 查看对正在编译的函数 模板 实例化“Node<int> *LinkedList<int>::crossDetect(void)”的引用
+D:\CODE\Data Structure\Q1\main.cpp(9): message : 查看对正在编译的 类 模板 实例化“LinkedList<int>”的引用
+D:\CODE\Data Structure\Q1\LinkedList.cpp(311,14): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+  Q1.vcxproj -> D:\CODE\Data Structure\Debug\Q1.exe

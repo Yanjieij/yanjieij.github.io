@@ -207,7 +207,6 @@ int main()
 				current[min_cnt] = city_set[current[min_cnt]];
 				army_list[current[min_cnt]]++;
 			}
-
 			time.push_back(current_dist);
 			delete[] army_time;
 		}

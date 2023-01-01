@@ -1,0 +1,7 @@
+﻿  main.cpp
+D:\CODE\Data Structure\Q4\cppjieba\Trie.hpp(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+D:\CODE\Data Structure\Q4\main.cpp(38,24): warning C4018: “<”: 有符号/无符号不匹配
+D:\CODE\Data Structure\Q4\main.cpp(76,22): warning C4244: “参数”: 从“__int64”转换到“intptr_t”，可能丢失数据
+D:\CODE\Data Structure\Q4\main.cpp(77,14): warning C4244: “参数”: 从“__int64”转换到“intptr_t”，可能丢失数据
+D:\CODE\Data Structure\Q4\main.cpp(95,20): warning C4018: “<”: 有符号/无符号不匹配
+  Q4.vcxproj -> D:\CODE\Data Structure\Debug\Q4.exe
