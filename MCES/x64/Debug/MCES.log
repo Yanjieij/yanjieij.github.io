@@ -1,2 +1,6 @@
-﻿  RealPolicySimulationSystem.cpp
-  MCES.vcxproj -> D:\CODE\Cpp\MCES\x64\Debug\MCES.exe
+﻿  moc MCES.h
+  MCES.cpp
+  RealPolicySimulationSystem.cpp
+  main.cpp
+  moc_MCES.cpp
+  MCES.vcxproj -> C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\MCES\x64\Debug\MCES.exe

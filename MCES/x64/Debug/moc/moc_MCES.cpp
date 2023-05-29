@@ -22,8 +22,8 @@ QT_BEGIN_MOC_NAMESPACE
 QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_MCES_t {
-    QByteArrayData data[10];
-    char stringdata0[228];
+    QByteArrayData data[13];
+    char stringdata0[307];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -41,7 +41,10 @@ QT_MOC_LITERAL(5, 89, 30), // "on_startSimulateButton_clicked"
 QT_MOC_LITERAL(6, 120, 30), // "on_pauseSimulateButton_clicked"
 QT_MOC_LITERAL(7, 151, 22), // "updateSimulateProgress"
 QT_MOC_LITERAL(8, 174, 21), // "updateLeftTimeCounter"
-QT_MOC_LITERAL(9, 196, 31) // "on_simulateDuration_textChanged"
+QT_MOC_LITERAL(9, 196, 26), // "on_elevatorNum_textChanged"
+QT_MOC_LITERAL(10, 223, 24), // "on_maxHeight_textChanged"
+QT_MOC_LITERAL(11, 248, 26), // "on_cabinVolume_textChanged"
+QT_MOC_LITERAL(12, 275, 31) // "on_simulateDuration_textChanged"
 
     },
     "MCES\0on_policySelection_currentIndexChanged\0"
@@ -49,6 +52,9 @@ QT_MOC_LITERAL(9, 196, 31) // "on_simulateDuration_textChanged"
     "on_startSimulateButton_clicked\0"
     "on_pauseSimulateButton_clicked\0"
     "updateSimulateProgress\0updateLeftTimeCounter\0"
+    "on_elevatorNum_textChanged\0"
+    "on_maxHeight_textChanged\0"
+    "on_cabinVolume_textChanged\0"
     "on_simulateDuration_textChanged"
 };
 #undef QT_MOC_LITERAL
@@ -59,7 +65,7 @@ static const uint qt_meta_data_MCES[] = {
        8,       // revision
        0,       // classname
        0,    0, // classinfo
-       7,   14, // methods
+      10,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -67,17 +73,23 @@ static const uint qt_meta_data_MCES[] = {
        0,       // signalCount
 
  // slots: name, argc, parameters, tag, flags
-       1,    1,   49,    2, 0x0a /* Public */,
-       4,    1,   52,    2, 0x0a /* Public */,
-       5,    0,   55,    2, 0x0a /* Public */,
-       6,    0,   56,    2, 0x0a /* Public */,
-       7,    0,   57,    2, 0x0a /* Public */,
-       8,    0,   58,    2, 0x0a /* Public */,
-       9,    0,   59,    2, 0x0a /* Public */,
+       1,    1,   64,    2, 0x0a /* Public */,
+       4,    1,   67,    2, 0x0a /* Public */,
+       5,    0,   70,    2, 0x0a /* Public */,
+       6,    0,   71,    2, 0x0a /* Public */,
+       7,    0,   72,    2, 0x0a /* Public */,
+       8,    0,   73,    2, 0x0a /* Public */,
+       9,    0,   74,    2, 0x0a /* Public */,
+      10,    0,   75,    2, 0x0a /* Public */,
+      11,    0,   76,    2, 0x0a /* Public */,
+      12,    0,   77,    2, 0x0a /* Public */,
 
  // slots: parameters
     QMetaType::Void, QMetaType::Int,    3,
     QMetaType::Void, QMetaType::Int,    3,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
@@ -99,7 +111,10 @@ void MCES::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void *
         case 3: _t->on_pauseSimulateButton_clicked(); break;
         case 4: _t->updateSimulateProgress(); break;
         case 5: _t->updateLeftTimeCounter(); break;
-        case 6: _t->on_simulateDuration_textChanged(); break;
+        case 6: _t->on_elevatorNum_textChanged(); break;
+        case 7: _t->on_maxHeight_textChanged(); break;
+        case 8: _t->on_cabinVolume_textChanged(); break;
+        case 9: _t->on_simulateDuration_textChanged(); break;
         default: ;
         }
     }
@@ -134,13 +149,13 @@ int MCES::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 7)
+        if (_id < 10)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 7;
+        _id -= 10;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 7)
+        if (_id < 10)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 7;
+        _id -= 10;
     }
     return _id;
 }

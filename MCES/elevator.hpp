@@ -8,7 +8,7 @@
 class elevator
 {
 public:
-    elevator(int maxLoad, int index) :mnMaxLoad(maxLoad), mnCurLoad(0), mnIndex(index),
+    elevator(int maxLoad, int index) :mnMaxVolume(maxLoad), mnCurLoad(0), mnIndex(index),
         mnCurFloor(0), mnAimFloor(0)
     {
         mnCurState = STATE_STOPING;
@@ -23,7 +23,7 @@ public:
     }
 private:
     //info
-    int mnMaxLoad;
+    int mnMaxVolume;
     int mnIndex;
     int mnCurLoad;
     //status

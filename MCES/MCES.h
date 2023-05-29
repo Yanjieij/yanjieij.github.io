@@ -3,7 +3,14 @@
 #include <QtWidgets/QMainWindow>
 #include "ui_MCES.h"
 #include <qstring.h>
+#include <vector>
 #include <qtimer>
+#include "elevator.hpp"
+
+#define ACO 1
+#define REAL 0
+
+using namespace std;
 
 class MCES : public QMainWindow
 {
@@ -18,8 +25,14 @@ private:
     QTimer *mpBarTimer;
     QTimer* mpCountTimer;
     int mnTimePassed;
-    int mnDuration;
     int mnTimerInterval;
+
+    int mnSimulateModel;
+    vector<elevator> mpElevatorVec;
+    int mnElevatorNum;
+    int mnMaxHeight;
+    int mnCabinVolume;
+    int mnSimulateDuration;
 
 public slots:
     void on_policySelection_currentIndexChanged(const int index);
@@ -28,6 +41,10 @@ public slots:
     void on_pauseSimulateButton_clicked();
     void updateSimulateProgress();
     void updateLeftTimeCounter();
+
+    void on_elevatorNum_textChanged();
+    void on_maxHeight_textChanged();
+    void on_cabinVolume_textChanged();
     void on_simulateDuration_textChanged();
 };
 
