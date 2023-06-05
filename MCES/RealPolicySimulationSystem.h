@@ -13,5 +13,9 @@
 
 class RealPolicySimulationSystem
 {
-
+public:
+	RealPolicySimulationSystem();
+	~RealPolicySimulationSystem();
+private:
+	int mnCurrentPolicy;
 };

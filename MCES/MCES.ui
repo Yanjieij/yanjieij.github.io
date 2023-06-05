@@ -480,7 +480,7 @@
     <property name="lineWidth">
      <number>2</number>
     </property>
-    <widget class="QWidget" name="gridLayoutWidget_3">
+    <widget class="QWidget" name="horizontalLayoutWidget">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -489,7 +489,7 @@
        <height>531</height>
       </rect>
      </property>
-     <layout class="QGridLayout" name="simulateGraph"/>
+     <layout class="QHBoxLayout" name="simulateGraph"/>
     </widget>
    </widget>
    <widget class="QLabel" name="text_simulateGraph">

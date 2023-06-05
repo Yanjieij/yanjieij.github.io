@@ -15,6 +15,7 @@
 #include <QtWidgets/QFormLayout>
 #include <QtWidgets/QFrame>
 #include <QtWidgets/QGridLayout>
+#include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QMainWindow>
@@ -63,8 +64,8 @@ public:
     QLabel *currentStatus;
     QLabel *text_status;
     QFrame *simulateGraphFrame;
-    QWidget *gridLayoutWidget_3;
-    QGridLayout *simulateGraph;
+    QWidget *horizontalLayoutWidget;
+    QHBoxLayout *simulateGraph;
     QLabel *text_simulateGraph;
     QFrame *simulateResultFrame;
     QWidget *gridLayoutWidget_4;
@@ -298,10 +299,10 @@ public:
         simulateGraphFrame->setFrameShape(QFrame::Box);
         simulateGraphFrame->setFrameShadow(QFrame::Sunken);
         simulateGraphFrame->setLineWidth(2);
-        gridLayoutWidget_3 = new QWidget(simulateGraphFrame);
-        gridLayoutWidget_3->setObjectName(QString::fromUtf8("gridLayoutWidget_3"));
-        gridLayoutWidget_3->setGeometry(QRect(10, 10, 841, 531));
-        simulateGraph = new QGridLayout(gridLayoutWidget_3);
+        horizontalLayoutWidget = new QWidget(simulateGraphFrame);
+        horizontalLayoutWidget->setObjectName(QString::fromUtf8("horizontalLayoutWidget"));
+        horizontalLayoutWidget->setGeometry(QRect(10, 10, 841, 531));
+        simulateGraph = new QHBoxLayout(horizontalLayoutWidget);
         simulateGraph->setSpacing(6);
         simulateGraph->setContentsMargins(11, 11, 11, 11);
         simulateGraph->setObjectName(QString::fromUtf8("simulateGraph"));

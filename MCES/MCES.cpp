@@ -8,26 +8,69 @@ MCES::MCES(QWidget *parent)
 	//初始化工作
 	mnTimePassed = 0;
 	mnTimerInterval = 1000;	//1000ms
-	mpBarTimer = new QTimer(this);
-	mpBarTimer->setInterval(mnTimerInterval);
-	mpCountTimer = new QTimer(this);
-	mpCountTimer->setInterval(1000);
-	connect(mpBarTimer, SIGNAL(timeout()), this, SLOT(updateSimulateProgress()));
-	connect(mpCountTimer, SIGNAL(timeout()), this, SLOT(updateLeftTimeCounter()));
+	mctrlBarTimer = new QTimer(this);
+	mctrlBarTimer->setInterval(mnTimerInterval);
+	mctrlCountTimer = new QTimer(this);
+	mctrlCountTimer->setInterval(1000);
+	connect(mctrlBarTimer, SIGNAL(timeout()), this, SLOT(updateSimulateProgress()));
+	connect(mctrlCountTimer, SIGNAL(timeout()), this, SLOT(updateLeftTimeCounter()));
 	ui.policyDescribe->setText(QStringLiteral("均衡交通，是正常时间使用的控制策略"));
 	ui.simulateProcess->setRange(0, 100);
 	ui.simulateProcess->setValue(0);
+
+	mpVerticalLayoutList = nullptr;
+
 	//参数
 	mnSimulateModel = -1;
 	mnElevatorNum = 0;
-	mnMaxHeight = 0;
+	mnMaxFloorHeight = 0;
 	mnCabinVolume = 0;
 	mnSimulateDuration = 0;
 }
 
+
 MCES::~MCES()
 {
-	delete mpBarTimer, mpCountTimer;
+	for (int i = 0; i < mnElevatorNum; i++)
+	{
+		delete[] mpElevatorVerticalLayoutList[i];
+	}
+	delete[] mpVerticalLayoutList;
+}
+
+
+bool MCES::initialize_simulate_graph()
+{
+	//创建电梯
+	for (int i = 0; i < mnElevatorNum; i++)
+	{
+		elevator _ele(mnCabinVolume, i);
+		mvecElevatorVec.push_back(_ele);
+	}
+	//创建hbox容器
+	mpVerticalLayoutList = new QVBoxLayout[mnElevatorNum]();
+	//创建lable
+	for (int i = 0; i < mnElevatorNum; i++)
+	{
+		QLabel* _label;
+		mpElevatorVerticalLayoutList.append(_label);
+		mpElevatorVerticalLayoutList[i] = new QLabel[mnMaxFloorHeight]();
+	}
+	for (int i = 0; i < mnElevatorNum; i++)
+	{
+		for (int cnt = 0; cnt < mnMaxFloorHeight; cnt++)
+		{
+			mpElevatorVerticalLayoutList[i][cnt].setMargin(5);
+			QString _str = "11111";
+			mpElevatorVerticalLayoutList[i][cnt].setText(_str);
+			mpVerticalLayoutList[i].addWidget(&(mpElevatorVerticalLayoutList[i][cnt]));
+		}
+	}
+	for (int i = 0; i < mnElevatorNum; i++)
+	{
+		ui.simulateGraph->addLayout(&(mpVerticalLayoutList[i]));
+	}
+	return 1;
 }
 
 //选择策略
@@ -117,8 +160,8 @@ void MCES::on_startSimulateButton_clicked()
 		ui.simulateProcess->setValue(0);
 		mnTimePassed = 0;
 	}
-	mpBarTimer->start();
-	mpCountTimer->start();
+	mctrlBarTimer->start();
+	mctrlCountTimer->start();
 
 	int _nTime = mnSimulateDuration;
 	QString _str;
@@ -127,20 +170,15 @@ void MCES::on_startSimulateButton_clicked()
 	_str += QString::number(_nTime % 60);
 	ui.leftTime->setText(_str);
 	ui.currentStatus->setText(QStringLiteral("正在运行"));
-
-	//创建电梯
-	for (int i = 0; i < mnElevatorNum; i++)
-	{
-		elevator _temp(mnCabinVolume, i);
-		mpElevatorVec.push_back(_temp);
-	}
+	
+	initialize_simulate_graph();
 
 }
 //点击 暂停模拟
 void MCES::on_pauseSimulateButton_clicked()
 {
-	mpBarTimer->stop();
-	mpCountTimer->stop();
+	mctrlBarTimer->stop();
+	mctrlCountTimer->stop();
 	ui.currentStatus->setText(QStringLiteral("已暂停"));
 }
 
@@ -151,8 +189,8 @@ void MCES::updateSimulateProgress()
 	_nCurrentValue++;
 	if (_nCurrentValue >= 100)
 	{
-		mpBarTimer->stop();
-		mpCountTimer->stop();
+		mctrlBarTimer->stop();
+		mctrlCountTimer->stop();
 		ui.currentStatus->setText(QStringLiteral("已结束"));
 	}
 	ui.simulateProcess->setValue(_nCurrentValue);
@@ -177,7 +215,7 @@ void MCES::on_elevatorNum_textChanged()
 }
 void MCES::on_maxHeight_textChanged()
 {
-	mnMaxHeight = ui.maxHeight->text().toInt();
+	mnMaxFloorHeight = ui.maxHeight->text().toInt();
 }
 void MCES::on_cabinVolume_textChanged()
 {
@@ -187,5 +225,5 @@ void MCES::on_simulateDuration_textChanged()
 {
 	mnSimulateDuration = ui.simulateDuration->text().toInt();
 	mnTimerInterval = mnSimulateDuration * 10;
-	mpBarTimer->setInterval(mnTimerInterval);
+	mctrlBarTimer->setInterval(mnTimerInterval);
 }

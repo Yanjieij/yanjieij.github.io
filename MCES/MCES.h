@@ -3,9 +3,12 @@
 #include <QtWidgets/QMainWindow>
 #include "ui_MCES.h"
 #include <qstring.h>
+#include <qlist.h>
 #include <vector>
 #include <qtimer>
 #include "elevator.hpp"
+#include "AcoSimulationSystem.h"
+#include "RealPolicySimulationSystem.h"
 
 #define ACO 1
 #define REAL 0
@@ -19,20 +22,29 @@ class MCES : public QMainWindow
 public:
     MCES(QWidget *parent = nullptr);
     ~MCES();
+    bool initialize_simulate_graph();
 
 private:
+    //界面用
     Ui::MCESClass ui;
-    QTimer *mpBarTimer;
-    QTimer* mpCountTimer;
+    QTimer *mctrlBarTimer;
+    QTimer* mctrlCountTimer;
     int mnTimePassed;
     int mnTimerInterval;
 
+    QList<QLabel*> mpElevatorVerticalLayoutList;
+    QVBoxLayout* mpVerticalLayoutList;
+
+    //系统参数
     int mnSimulateModel;
-    vector<elevator> mpElevatorVec;
     int mnElevatorNum;
-    int mnMaxHeight;
+    int mnMaxFloorHeight;
     int mnCabinVolume;
     int mnSimulateDuration;
+    vector<elevator> mvecElevatorVec;
+
+    RealPolicySimulationSystem mRealSystem;
+    AcoSimulationSystem mAcoSystem;
 
 public slots:
     void on_policySelection_currentIndexChanged(const int index);
