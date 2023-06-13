@@ -12,25 +12,33 @@ MCES::MCES(QWidget *parent)
 	mctrlBarTimer->setInterval(mnTimerInterval);
 	mctrlCountTimer = new QTimer(this);
 	mctrlCountTimer->setInterval(1000);
-	connect(mctrlBarTimer, SIGNAL(timeout()), this, SLOT(updateSimulateProgress()));
-	connect(mctrlCountTimer, SIGNAL(timeout()), this, SLOT(updateLeftTimeCounter()));
+	connect(mctrlBarTimer, SIGNAL(timeout()), this, SLOT(update_simulate_progress()));
+	connect(mctrlCountTimer, SIGNAL(timeout()), this, SLOT(updat_left_time_counter()));
+	connect(mctrlCountTimer, SIGNAL(timeout()), this, SLOT(simulate_passenger_request()));
 	ui.policyDescribe->setText(QStringLiteral("均衡交通，是正常时间使用的控制策略"));
 	ui.simulateProcess->setRange(0, 100);
 	ui.simulateProcess->setValue(0);
 
 	mpVerticalLayoutList = nullptr;
 
+	mpEachFloorWaitingPassengerNum = nullptr;
+	mpEachFloorRequestStatus = NONE;
+
 	//参数
-	mnSimulateModel = -1;
+	mnSimulatePolicy = POLICY_BALANCED;
+	mnSimulateModel = REAL;
 	mnElevatorNum = 0;
 	mnMaxFloorHeight = 0;
 	mnCabinVolume = 0;
 	mnSimulateDuration = 0;
+	mnTwoWayTargetFloor = 0;
 }
 
 
 MCES::~MCES()
 {
+	delete[] mpEachFloorRequestStatus;
+	delete[] mpEachFloorWaitingPassengerNum;
 	for (int i = 0; i < mnElevatorNum; i++)
 	{
 		delete[] mpElevatorVerticalLayoutList[i];
@@ -56,21 +64,146 @@ bool MCES::initialize_simulate_graph()
 		mpElevatorVerticalLayoutList.append(_label);
 		mpElevatorVerticalLayoutList[i] = new QLabel[mnMaxFloorHeight]();
 	}
+	//调整label
 	for (int i = 0; i < mnElevatorNum; i++)
 	{
 		for (int cnt = 0; cnt < mnMaxFloorHeight; cnt++)
 		{
 			mpElevatorVerticalLayoutList[i][cnt].setMargin(5);
+			mpElevatorVerticalLayoutList[i][cnt].setAlignment(Qt::AlignCenter);
+			mpElevatorVerticalLayoutList[i][cnt].setStyleSheet("border: 1px dashed black;");
 			QString _str = "11111";
 			mpElevatorVerticalLayoutList[i][cnt].setText(_str);
 			mpVerticalLayoutList[i].addWidget(&(mpElevatorVerticalLayoutList[i][cnt]));
 		}
 	}
+	//完成布局
+	//ui.simulateGraph->setSpacing(8);
 	for (int i = 0; i < mnElevatorNum; i++)
 	{
 		ui.simulateGraph->addLayout(&(mpVerticalLayoutList[i]));
 	}
 	return 1;
+}
+
+int MCES::simulate_passenger_request()
+{
+	int _exist = rand() % 11;
+	if (_exist > 9)
+	{
+		return 0;
+	}
+	else
+	{
+		int _num = rand() % 3;
+		int _cnt = _num;
+		while (_num > 0)
+		{
+			_num--;			
+			request _r;
+			int _from = 0;
+			int _to = 0;
+			switch (mnSimulatePolicy)
+			{
+			case POLICY_BALANCED:
+			{
+				_from = rand() % (2 * mnMaxFloorHeight);
+				if (_from >= mnMaxFloorHeight)
+					_from = 0;
+				_to = rand() % (2 * mnMaxFloorHeight);
+				if (_to >= mnMaxFloorHeight)
+					_to = 0;
+				while (_from == _to)
+				{
+					_to = rand() % (2 * mnMaxFloorHeight);
+					if (_to >= mnMaxFloorHeight)
+						_to = 0;
+				}
+				break;
+			}
+			case POLICY_UPPEAK:
+			{
+				_from = rand() % (5 * mnMaxFloorHeight);
+				if (_from >= mnMaxFloorHeight)
+					_from = 0;
+				_to = rand() % mnMaxFloorHeight;
+				while (_from == _to)
+				{
+					_to = rand() % mnMaxFloorHeight;
+				}
+				break;
+			}
+			case POLICY_DOWNPEAK:
+			{
+				_to = rand() % (5 * mnMaxFloorHeight);
+				if (_to >= mnMaxFloorHeight)
+					_to = 0;
+				_from = rand() % mnMaxFloorHeight;
+				while (_from == _to)
+				{
+					_from = rand() % mnMaxFloorHeight;
+				}
+				break;
+			}
+			case POLICY_TWOWAY:
+			{
+				_to = rand() % (5 * mnMaxFloorHeight);
+				if (_to >= mnMaxFloorHeight)
+					_to = mnTwoWayTargetFloor;
+				_from = rand() % mnMaxFloorHeight;
+				while (_from == _to)
+				{
+					_from = rand() % mnMaxFloorHeight;
+				}
+				break;
+			}
+			default:
+				break;
+			}
+			_r.passengerNum = (rand() % 5) + 1;
+			_r.curFloor = _from;
+			_r.targetFloor = _to;
+			if (_from > _to)
+				_r.status = DOWN;
+			else
+				_r.status = UP;
+			mqueRequestList.push(_r);
+		}
+		if (mnSimulateModel == REAL)
+			REAL_request_respond(_num);
+		else if (mnSimulateModel == ACO)
+			ACO_request_respond(_num);
+		return _num;
+	}
+}
+
+void MCES::REAL_request_respond(int num)
+{
+	int cnt = 0;
+	while (cnt < num)
+	{
+		cnt++;
+		auto cur = mqueRequestList.front();
+
+		mqueRequestList.pop();
+	}
+}
+
+void MCES::ACO_request_respond(int num)
+{
+	int cnt = 0;
+	while (cnt < num)
+	{
+		cnt++;
+		auto cur = mqueRequestList.front();
+
+		mqueRequestList.pop();
+	}
+}
+
+void MCES::refresh_simulate_graph()
+{
+
 }
 
 //选择策略
@@ -93,12 +226,15 @@ void MCES::on_policySelection_currentIndexChanged(const int index)
 	case 3:
 		ui.policyDescribe->setText(
 			QStringLiteral("乘客集中前往某一楼层，一般用于开会、吃饭时间"));
+		srand((unsigned)time(NULL));
+		mnTwoWayTargetFloor = rand() % mnMaxFloorHeight;
 		break;
 	default:
 		ui.policyDescribe->setText(
 			QStringLiteral("平衡状态：均衡交通，是正常时间使用的控制策略"));
 		break;
 	}
+	//RealPolicySimulationSystem::set_policy(index);
 }
 
 //选择模拟算法
@@ -153,6 +289,7 @@ void MCES::on_startSimulateButton_clicked()
 	on_maxHeight_textChanged();
 	on_simulateDuration_textChanged();
 	
+	srand((unsigned)time(NULL));
 
 	//状态栏更新
 	if (ui.simulateProcess->value() == 100)
@@ -160,8 +297,6 @@ void MCES::on_startSimulateButton_clicked()
 		ui.simulateProcess->setValue(0);
 		mnTimePassed = 0;
 	}
-	mctrlBarTimer->start();
-	mctrlCountTimer->start();
 
 	int _nTime = mnSimulateDuration;
 	QString _str;
@@ -173,6 +308,11 @@ void MCES::on_startSimulateButton_clicked()
 	
 	initialize_simulate_graph();
 
+	mpEachFloorRequestStatus = new int[mnMaxFloorHeight];
+	mpEachFloorWaitingPassengerNum = new int[mnMaxFloorHeight];
+
+	mctrlBarTimer->start();
+	mctrlCountTimer->start();
 }
 //点击 暂停模拟
 void MCES::on_pauseSimulateButton_clicked()
@@ -183,7 +323,7 @@ void MCES::on_pauseSimulateButton_clicked()
 }
 
 //进度条和计时器配合
-void MCES::updateSimulateProgress()
+void MCES::update_simulate_progress()
 {
 	int _nCurrentValue = ui.simulateProcess->value();
 	_nCurrentValue++;
@@ -195,7 +335,7 @@ void MCES::updateSimulateProgress()
 	}
 	ui.simulateProcess->setValue(_nCurrentValue);
 }
-void MCES::updateLeftTimeCounter()
+void MCES::updat_left_time_counter()
 {
 	mnTimePassed++;
 	int _nTime = mnSimulateDuration - mnTimePassed;

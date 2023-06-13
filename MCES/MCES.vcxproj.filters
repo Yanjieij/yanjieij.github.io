@@ -43,18 +43,15 @@
     <ClCompile Include="AcoSimulationSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RealPolicySimulationSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="elevator.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RealPolicySimulationSystem.h">
+    <ClInclude Include="AcoSimulationSystem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AcoSimulationSystem.h">
+    <ClInclude Include="request.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

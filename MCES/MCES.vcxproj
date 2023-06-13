@@ -83,7 +83,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="RealPolicySimulationSystem.cpp" />
     <QtRcc Include="MCES.qrc" />
     <QtUic Include="MCES.ui" />
     <QtMoc Include="MCES.h" />
@@ -94,7 +93,7 @@
   <ItemGroup>
     <ClInclude Include="AcoSimulationSystem.h" />
     <ClInclude Include="elevator.hpp" />
-    <ClInclude Include="RealPolicySimulationSystem.h" />
+    <ClInclude Include="request.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">
