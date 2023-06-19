@@ -1,6 +1,6 @@
 #pragma once
 
-#include<queue>
+#include <queue>
 
 /// 全局变量
 /// State：0 for 停止，1 for 运行
@@ -14,27 +14,34 @@
 class elevator
 {
 public:
-    elevator(int maxLoad, int index) :mnMaxVolume(maxLoad), mnCurLoad(0), mnIndex(index),
-        mnCurFloor(0), mnAimFloor(0)
+    elevator(int maxLoad, int index) :mnMaxLoad(maxLoad), mnCurLoad(0), mnIndex(index),
+        mnCurFloor(0), mnLastFloor(0), mnAimFloor(0), mbIsFull(false)
     {
         mnCurState = STATE_STOPING;
     }
-    int getLoad()
+    void add_request(request _r)
     {
-        return mnCurLoad;
+        mqueRequestQueue.push(_r);
     }
-    int getFloor()
+    QString generate_info_display()
     {
-        return mnCurFloor;
+        QString _state;
+        if (mnCurState == ELEVATOR_UP)
+            _state = "↑";
+        else
+            _state = "↓";
+        QString _str = QString::number(mnCurLoad) + "/" + QString::number(mnMaxLoad) + " " + _state + QString::number(mnAimFloor);
+        return _str;
     }
-private:
     //参数
-    int mnMaxVolume;
+    int mnMaxLoad;
     int mnIndex;
     int mnCurLoad;
     //状态
     int mnCurFloor;
+    int mnLastFloor;
     int mnCurState;
     int mnAimFloor;
-    queue<bool> mqueRequestQueue;
+    bool mbIsFull;
+    std::queue<request> mqueRequestQueue;
 };

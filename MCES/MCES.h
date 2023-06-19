@@ -41,6 +41,11 @@ public:
     void REAL_request_respond(int num);
     void ACO_request_respond(int num);
 
+    int balanced_elevator_select(request _r);
+    int uppeak_elevator_select(request _r);
+    int downpeak_elevator_select(request _r);
+    int twoway_elevator_select(request _r);
+
 private:
     //ΩÁ√Ê”√
     Ui::MCESClass ui;
