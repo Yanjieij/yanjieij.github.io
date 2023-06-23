@@ -86,12 +86,10 @@
     <QtRcc Include="MCES.qrc" />
     <QtUic Include="MCES.ui" />
     <QtMoc Include="MCES.h" />
-    <ClCompile Include="AcoSimulationSystem.cpp" />
     <ClCompile Include="MCES.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AcoSimulationSystem.h" />
     <ClInclude Include="elevator.hpp" />
     <ClInclude Include="request.hpp" />
   </ItemGroup>

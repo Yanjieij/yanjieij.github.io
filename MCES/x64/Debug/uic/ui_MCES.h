@@ -381,7 +381,7 @@ public:
         modelSelection->addItem(QString());
         modelSelection->addItem(QString());
         modelSelection->setObjectName(QString::fromUtf8("modelSelection"));
-        modelSelection->setGeometry(QRect(110, 10, 180, 21));
+        modelSelection->setGeometry(QRect(110, 10, 122, 20));
         modelSelection->setFont(font1);
         modelSelection->setLayoutDirection(Qt::LeftToRight);
         modelSelection->setSizeAdjustPolicy(QComboBox::AdjustToContents);
@@ -429,8 +429,8 @@ public:
         text_ATD->setText(QCoreApplication::translate("MCESClass", "\345\271\263\345\235\207\344\271\230\346\242\257\346\227\266\351\227\264", nullptr));
         text_AWD->setText(QCoreApplication::translate("MCESClass", "\345\271\263\345\235\207\345\200\231\346\242\257\346\227\266\351\227\264", nullptr));
         text_model->setText(QCoreApplication::translate("MCESClass", "\346\216\247\345\210\266\347\255\226\347\225\245\351\200\211\346\213\251", nullptr));
-        modelSelection->setItemText(0, QCoreApplication::translate("MCESClass", "\347\234\237\345\256\236\347\224\265\346\242\257\350\260\203\345\272\246\346\250\241\346\213\237", nullptr));
-        modelSelection->setItemText(1, QCoreApplication::translate("MCESClass", "\350\232\201\347\276\244\347\256\227\346\263\225\344\274\230\345\214\226\350\260\203\345\272\246\346\250\241\346\213\237", nullptr));
+        modelSelection->setItemText(0, QCoreApplication::translate("MCESClass", "\347\256\200\345\215\225\350\260\203\345\272\246\347\256\227\346\263\225\346\250\241\346\213\237", nullptr));
+        modelSelection->setItemText(1, QCoreApplication::translate("MCESClass", "\347\234\237\345\256\236\347\224\265\346\242\257\350\260\203\345\272\246\346\250\241\346\213\237", nullptr));
 
     } // retranslateUi
 

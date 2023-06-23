@@ -11,12 +11,15 @@ MCES::MCES(QWidget *parent)
 	mctrlBarTimer = new QTimer(this);
 	mctrlBarTimer->setInterval(mnTimerInterval);
 	mctrlCountTimer = new QTimer(this);
-	mctrlCountTimer->setInterval(1000);
+	mctrlCountTimer->setInterval(3000);
 	connect(mctrlBarTimer, SIGNAL(timeout()), this, SLOT(update_simulate_progress()));
 	connect(mctrlCountTimer, SIGNAL(timeout()), this, SLOT(updat_left_time_counter()));
 	connect(mctrlCountTimer, SIGNAL(timeout()), this, SLOT(simulate_passenger_request()));
 	//connect(mctrlCountTimer, SIGNAL(timeout()), this, SLOT(refresh_simulate_graph());
-	ui.policyDescribe->setText(QStringLiteral("均衡交通，是正常时间使用的控制策略"));
+	//ui.policyDescribe->setText(QStringLiteral("均衡交通，是正常时间使用的控制策略"));
+	ui.policySelection->setEnabled(0);
+	ui.policyDescribe->setText(QStringLiteral(
+		"调度策略仅适用于现实调度模拟，不适用于简单调度。"));
 	ui.simulateProcess->setRange(0, 100);
 	ui.simulateProcess->setValue(0);
 
@@ -26,8 +29,8 @@ MCES::MCES(QWidget *parent)
 	mpEachFloorRequestStatus = NONE;
 
 	//参数
-	mnSimulatePolicy = POLICY_BALANCED;
-	mnSimulateModel = REAL;
+	mnSimulatePolicy = POLICY_EASY;
+	mnSimulateModel = EASY;
 	mnElevatorNum = 0;
 	mnMaxFloorHeight = 0;
 	mnCabinVolume = 0;
@@ -50,12 +53,6 @@ MCES::~MCES()
 
 bool MCES::initialize_simulate_graph()
 {
-	//创建电梯
-	for (int i = 0; i < mnElevatorNum; i++)
-	{
-		elevator _ele(mnCabinVolume, i);
-		mvecElevatorVec.push_back(_ele);
-	}
 	//创建hbox容器
 	mpVerticalLayoutList = new QVBoxLayout[mnElevatorNum]();
 	//创建lable
@@ -75,7 +72,7 @@ bool MCES::initialize_simulate_graph()
 			mpElevatorVerticalLayoutList[i][cnt].setStyleSheet("border: 1px dashed black;");
 			QString _str = " ";
 			mpElevatorVerticalLayoutList[i][cnt].setText(_str);
-			mpVerticalLayoutList[i].addWidget(&(mpElevatorVerticalLayoutList[i][cnt]));
+			mpVerticalLayoutList[i].insertWidget(0, &(mpElevatorVerticalLayoutList[i][cnt]));
 		}
 	}
 	//完成布局
@@ -89,7 +86,7 @@ bool MCES::initialize_simulate_graph()
 
 int MCES::simulate_passenger_request()
 {
-	int _exist = rand() % 11;
+	int _exist = rand() % 20;
 	if (_exist > 9)
 	{
 		return 0;
@@ -106,6 +103,23 @@ int MCES::simulate_passenger_request()
 			int _to = 0;
 			switch (mnSimulatePolicy)
 			{
+			case POLICY_EASY:
+			{
+				_from = rand() % (2 * mnMaxFloorHeight);
+				if (_from >= mnMaxFloorHeight)
+					_from = 0;
+				_to = rand() % (2 * mnMaxFloorHeight);
+				if (_to >= mnMaxFloorHeight)
+					_to = 0;
+				while (_from == _to)
+				{
+					_to = rand() % (2 * mnMaxFloorHeight);
+					if (_to >= mnMaxFloorHeight)
+						_to = 0;
+				}
+				break;
+				break;
+			}
 			case POLICY_BALANCED:
 			{
 				_from = rand() % (2 * mnMaxFloorHeight);
@@ -162,6 +176,8 @@ int MCES::simulate_passenger_request()
 				break;
 			}
 			_r.passengerNum = (rand() % 5) + 1;
+			if(mnSimulateModel==EASY)
+				_r.passengerNum = (rand() % 12) + 1;
 			_r.curFloor = _from;
 			_r.targetFloor = _to;
 			if (_from > _to)
@@ -172,44 +188,35 @@ int MCES::simulate_passenger_request()
 		}
 		if (mnSimulateModel == REAL)
 			REAL_request_respond(_num);
-		else if (mnSimulateModel == ACO)
-			ACO_request_respond(_num);
+		else if (mnSimulateModel == EASY)
+			EASY_request_respond(_num);
 		return _num;
 	}
 }
 
-int MCES::balanced_elevator_select(request _r)
+int MCES::balanced_elevator_select(request _r, int excep)
 {
-	//找最近的电梯进行承载
-	int _minDist = mnMaxFloorHeight;
-	int pickIndex = -1;
-	for (int i = 0; i < mvecElevatorVec.size(); i++)
-	{
-		int _dist = abs(_r.targetFloor - mvecElevatorVec[i].mnCurFloor);
-		if (_dist < _minDist)
-		{
-			_minDist = _dist;
-			pickIndex = i;
-		}
-	}
-	return pickIndex;
+	return 0;
 }
-int MCES::uppeak_elevator_select(request _r)
+int MCES::uppeak_elevator_select(request _r, int excep)
 {
+	//所有电梯在执行完任务都回到一楼
 	if (_r.status == UP)
 	{
-
+		
 	}
 	return 0;
 }
-int MCES::downpeak_elevator_select(request _r)
+int MCES::downpeak_elevator_select(request _r, int excep)
+{
+	//所有电梯都到达顶层再开始向下运行
+	return 0;
+}
+int MCES::twoway_elevator_select(request _r, int excep)
 {
 	return 0;
 }
-int MCES::twoway_elevator_select(request _r)
-{
-	return 0;
-}
+
 
 void MCES::REAL_request_respond(int num)
 {
@@ -217,49 +224,122 @@ void MCES::REAL_request_respond(int num)
 	while (!mqueRequestList.empty())
 	{
 		//cnt++;
-		auto cur = mqueRequestList.front();
+		auto cur_r = mqueRequestList.front();
 		int _elevatorSelected = -1;
 		switch (mnSimulatePolicy)
 		{
 		case POLICY_BALANCED:
 		{
-			_elevatorSelected = balanced_elevator_select(cur);
+			_elevatorSelected = balanced_elevator_select(cur_r);
+			//if (!mvecElevatorVec[_elevatorSelected].access_request(cur_r))
+				//_elevatorSelected = balanced_elevator_select(cur_r, _elevatorSelected);
 			break;
 		}
 		case POLICY_UPPEAK:
 		{
-			_elevatorSelected = uppeak_elevator_select(cur);
+			_elevatorSelected = uppeak_elevator_select(cur_r);
+			//if (!mvecElevatorVec[_elevatorSelected].access_request(cur_r))
+				//_elevatorSelected = uppeak_elevator_select(cur_r, _elevatorSelected);
 			break;
 		}
 		case POLICY_DOWNPEAK:
 		{
-			_elevatorSelected = downpeak_elevator_select(cur);
+			_elevatorSelected = downpeak_elevator_select(cur_r);
+			//if (!mvecElevatorVec[_elevatorSelected].access_request(cur_r))
+				//_elevatorSelected = downpeak_elevator_select(cur_r, _elevatorSelected);
 			break;
 		}
 		case POLICY_TWOWAY:
 		{
-			_elevatorSelected = twoway_elevator_select(cur);
+			_elevatorSelected = twoway_elevator_select(cur_r);
+			//if (!mvecElevatorVec[_elevatorSelected].access_request(cur_r))
+				//_elevatorSelected = twoway_elevator_select(cur_r, _elevatorSelected);
 			break;
 		}
 		default:
 			break;
 		}
-		mvecElevatorVec[_elevatorSelected].add_request(cur);
+		mvecElevatorVec[_elevatorSelected].add_request(cur_r);
 
 		mqueRequestList.pop();
 	}
 	refresh_simulate_graph();
 }
 
-void MCES::ACO_request_respond(int num)
+int MCES::easy_elevator_select(request _r, int excep)
 {
-	int cnt = 0;
-	while (cnt < num)
+	//找最近的电梯进行承载
+	int pickIndex = -1;
+	if (excep == -1)
 	{
-		cnt++;
-		auto cur = mqueRequestList.front();
-
+		int _minDist = mnMaxFloorHeight;
+		for (int i = 0; i < mvecElevatorVec.size(); i++)
+		{
+			int _dist = abs(_r.curFloor - mvecElevatorVec[i].mnCurFloor);
+			if (_dist < _minDist)
+			{
+				_minDist = _dist;
+				pickIndex = i;
+			}
+		}
+	}
+	else
+	{
+		int _exceptDist = abs(_r.curFloor - mvecElevatorVec[excep].mnCurFloor);
+		int _minDist = mnMaxFloorHeight;
+		for (int i = 0; i < mvecElevatorVec.size(); i++)
+		{
+			if (i == excep)
+				continue;
+			int _dist = abs(_r.curFloor - mvecElevatorVec[i].mnCurFloor);
+			if (_dist < _exceptDist)
+				continue;
+			if (_dist < _minDist)
+			{
+				_minDist = _dist;
+				pickIndex = i;
+			}
+		}
+	}
+	return pickIndex;
+}
+void MCES::EASY_request_respond(int num)
+{
+	//int cnt = 0;
+	while (!mqueRequestList.empty())
+	{
+		//cnt++;
+		auto cur_r = mqueRequestList.front();
+		int _elevatorSelected = rand() % mvecElevatorVec.size();
+		for (int i = 0; i < mvecElevatorVec.size(); i++)
+		{
+			if (mvecElevatorVec[i].mqueRequestQueue.size() < mvecElevatorVec[_elevatorSelected].mqueRequestQueue.size())
+				_elevatorSelected = i;
+		}
+		/*
+		_elevatorSelected = easy_elevator_select(cur_r);
+		while (!mvecElevatorVec[_elevatorSelected].easy_access_request(cur_r))
+			_elevatorSelected = easy_elevator_select(cur_r, _elevatorSelected);
+		*/
+		mvecElevatorVec[_elevatorSelected].add_request(cur_r);
 		mqueRequestList.pop();
+	}
+	activate_elevators_move();
+	//refresh_simulate_graph();
+}
+
+void MCES::activate_elevators_move()
+{
+	for (int i = 0; i < mvecElevatorVec.size(); i++)
+	{
+		mvecElevatorVec[i].execute_moving();
+		mpElevatorVerticalLayoutList[i][6].setText(QString::number(mvecElevatorVec[i].mqueRequestQueue.size()));
+		if (mvecElevatorVec[i].mqueRequestQueue.size() == 0)
+			continue;
+		mpElevatorVerticalLayoutList[i][mvecElevatorVec[i].mnCurFloor].setText(mvecElevatorVec[i].generate_info_display());
+		mpElevatorVerticalLayoutList[i][mvecElevatorVec[i].mnCurFloor].setStyleSheet("border: 2px solid black;");
+		mpElevatorVerticalLayoutList[i][mvecElevatorVec[i].mnLastFloor].setText("");
+		mpElevatorVerticalLayoutList[i][mvecElevatorVec[i].mnLastFloor].setStyleSheet("border: 1px dashed black;");
 	}
 }
 
@@ -267,7 +347,13 @@ void MCES::refresh_simulate_graph()
 {
 	for (int i = 0; i < mvecElevatorVec.size(); i++)
 	{
+		mpElevatorVerticalLayoutList[i][6].setText(QString::number(mvecElevatorVec[i].mqueRequestQueue.size()));
+		if (mvecElevatorVec[i].mqueRequestQueue.size() == 0)
+			continue;
 		mpElevatorVerticalLayoutList[i][mvecElevatorVec[i].mnCurFloor].setText(mvecElevatorVec[i].generate_info_display());
+		mpElevatorVerticalLayoutList[i][mvecElevatorVec[i].mnCurFloor].setStyleSheet("border: 2px solid black;");
+		mpElevatorVerticalLayoutList[i][mvecElevatorVec[i].mnLastFloor].setText("");
+		mpElevatorVerticalLayoutList[i][mvecElevatorVec[i].mnLastFloor].setStyleSheet("border: 1px dashed black;");
 	}
 }
 
@@ -310,13 +396,13 @@ void MCES::on_policySelection_currentIndexChanged(const int index)
 //选择模拟算法
 void MCES::on_modelSelection_currentIndexChanged(const int index)
 {
-	//切换到蚁群算法
-	if (index == ACO)
+	//切换到简单算法
+	if (index == EASY)
 	{
 		ui.policySelection->setEnabled(0);
 		ui.policyDescribe->setText(QStringLiteral(
-			"调度策略仅适用于现实调度模拟，不适用于蚁群调度。"));
-		mnSimulateModel = ACO;
+			"调度策略仅适用于现实调度模拟，不适用于简单调度。"));
+		mnSimulateModel = EASY;
 	}
 	//切换到现实模拟算法
 	else if (index == REAL)
@@ -375,11 +461,22 @@ void MCES::on_startSimulateButton_clicked()
 	_str += QString::number(_nTime % 60);
 	ui.leftTime->setText(_str);
 	ui.currentStatus->setText(QStringLiteral("正在运行"));
-	
-	initialize_simulate_graph();
 
-	mpEachFloorRequestStatus = new int[mnMaxFloorHeight];
-	mpEachFloorWaitingPassengerNum = new int[mnMaxFloorHeight];
+	if (mvecElevatorVec.empty())
+	{
+		//创建电梯
+		for (int i = 0; i < mnElevatorNum; i++)
+		{
+			elevator _ele(mnCabinVolume, i);
+			_ele.mnCurPolicy = mnSimulatePolicy;
+			mvecElevatorVec.push_back(_ele);
+		}
+
+		initialize_simulate_graph();
+
+		mpEachFloorRequestStatus = new int[mnMaxFloorHeight];
+		mpEachFloorWaitingPassengerNum = new int[mnMaxFloorHeight];
+	}
 
 	mctrlBarTimer->start();
 	mctrlCountTimer->start();

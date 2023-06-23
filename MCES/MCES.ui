@@ -661,8 +661,8 @@
       <rect>
        <x>110</x>
        <y>10</y>
-       <width>180</width>
-       <height>21</height>
+       <width>122</width>
+       <height>20</height>
       </rect>
      </property>
      <property name="font">
@@ -679,12 +679,12 @@
      </property>
      <item>
       <property name="text">
-       <string>真实电梯调度模拟</string>
+       <string>简单调度算法模拟</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>蚁群算法优化调度模拟</string>
+       <string>真实电梯调度模拟</string>
       </property>
      </item>
     </widget>

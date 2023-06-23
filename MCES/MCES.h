@@ -9,28 +9,25 @@
 #include <queue>
 #include "elevator.hpp"
 #include "request.hpp"
-#include "AcoSimulationSystem.h"
 
 //模型选择宏定义
-#define ACO 1
-#define REAL 0
+#define EASY 0
+#define REAL 1
+
 //每层电梯请求状态宏定义
 #define NONE 0
 #define ONLY_UP 1
 #define ONLY_DOWN 2
 #define BOTH 3
+
 //真实模拟的四种策略
-    /// 平衡交通 正常情况下采用
-    /// 上行高峰/下行高峰 乘客集中上楼/下楼
-    /// 二路交通 乘客集中前往某一层
-#define POLICY_BALANCED 0
-#define POLICY_UPPEAK 1
-#define POLICY_DOWNPEAK 2
-#define POLICY_TWOWAY 3
+    /// 平衡交通 正常情况下采用 POLICY_BALANCED 0
+    /// 上行高峰/下行高峰 乘客集中上楼/下楼 POLICY_UPPEAK 1 POLICY_DOWNPEAK 2
+    /// 二路交通 乘客集中前往某一层 POLICY_TWOWAY 3
 
 using namespace std;
 
-class MCES : public QMainWindow, public AcoSimulationSystem
+class MCES : public QMainWindow
 {
     Q_OBJECT
 
@@ -39,12 +36,13 @@ public:
     ~MCES();
     bool initialize_simulate_graph();
     void REAL_request_respond(int num);
-    void ACO_request_respond(int num);
+    void EASY_request_respond(int num);
 
-    int balanced_elevator_select(request _r);
-    int uppeak_elevator_select(request _r);
-    int downpeak_elevator_select(request _r);
-    int twoway_elevator_select(request _r);
+    int easy_elevator_select(request _r, int excep = -1);
+    int balanced_elevator_select(request _r, int excep = -1);
+    int uppeak_elevator_select(request _r, int excep = -1);
+    int downpeak_elevator_select(request _r, int excep = -1);
+    int twoway_elevator_select(request _r, int excep = -1);
 
 private:
     //界面用
@@ -80,6 +78,7 @@ public slots:
     void update_simulate_progress();
     void updat_left_time_counter();
     int simulate_passenger_request();
+    void activate_elevators_move();
     void refresh_simulate_graph();
 
     void on_elevatorNum_textChanged();
