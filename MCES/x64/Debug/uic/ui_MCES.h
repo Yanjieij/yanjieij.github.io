@@ -423,9 +423,9 @@ public:
         text_status->setText(QCoreApplication::translate("MCESClass", "\345\275\223\345\211\215\347\212\266\346\200\201", nullptr));
         text_simulateGraph->setText(QCoreApplication::translate("MCESClass", "\345\217\257\350\247\206\345\214\226\346\250\241\346\213\237", nullptr));
         text_ARC->setText(QCoreApplication::translate("MCESClass", "\345\271\263\345\235\207\350\275\275\345\256\242\347\216\207", nullptr));
-        ARC->setText(QCoreApplication::translate("MCESClass", "0", nullptr));
-        AWD->setText(QCoreApplication::translate("MCESClass", "0", nullptr));
-        ATD->setText(QCoreApplication::translate("MCESClass", "0", nullptr));
+        ARC->setText(QString());
+        AWD->setText(QString());
+        ATD->setText(QString());
         text_ATD->setText(QCoreApplication::translate("MCESClass", "\345\271\263\345\235\207\344\271\230\346\242\257\346\227\266\351\227\264", nullptr));
         text_AWD->setText(QCoreApplication::translate("MCESClass", "\345\271\263\345\235\207\345\200\231\346\242\257\346\227\266\351\227\264", nullptr));
         text_model->setText(QCoreApplication::translate("MCESClass", "\346\216\247\345\210\266\347\255\226\347\225\245\351\200\211\346\213\251", nullptr));

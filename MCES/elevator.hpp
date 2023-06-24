@@ -23,11 +23,13 @@ class elevator
 {
 public:
     elevator(int maxLoad, int index) :mnMaxLoad(maxLoad), mnCurLoad(0), mnIndex(index),
-        mnCurFloor(0), mnLastFloor(0), mnTargetFloor(0), mnCurPolicy(POLICY_EASY)
+        mnCurFloor(0), mnLastFloor(0), mnTargetFloor(0), mnCurPolicy(POLICY_EASY), mnGoDestDuration(0),
+        mnGoPickDuration(0)
     {
         mnCurMovingState = MOVING_WAIT;
         mnCurPickingState = STATE_STOPING;
     }
+
     bool easy_access_request(request _r)
     {
         if ((_r.passengerNum + mnCurLoad) > mnMaxLoad)
@@ -35,10 +37,12 @@ public:
         else
             return 1;
     }
+
     void add_request(request _r)
     {
         mqueRequestQueue.push(_r);
     }
+
     void execute_moving()
     {
         switch (mnCurMovingState)
@@ -61,12 +65,18 @@ public:
         else
             real_refresh_request();
     }
+
     void easy_refresh_request()
     {
-        if (mnCurPickingState == STATE_STOPING && (!mqueRequestQueue.empty()))
+        if (mnCurPickingState == STATE_STOPING || mnCurMovingState == MOVING_WAIT)
         {
-            mnCurPickingState = STATE_GO_PICK;
-            msCurRequest = mqueRequestQueue.front();
+            if (!mqueRequestQueue.empty())
+            {
+                mnCurPickingState = STATE_GO_PICK;
+                msCurRequest = mqueRequestQueue.front();
+                mnTargetFloor = msCurRequest.curFloor;
+                mnCurMovingState = ((mnTargetFloor - mnCurFloor) > 0 ? MOVING_UP : MOVING_DOWN);
+            }
         }
         switch (mnCurPickingState)
         {
@@ -80,21 +90,11 @@ public:
                 {
                     msCurRequest = mqueRequestQueue.front();
                     mnTargetFloor = msCurRequest.curFloor;
-                    while (mnTargetFloor == mnCurFloor)
+                    if (mnTargetFloor == mnCurFloor)
                     {
-                        mqueRequestQueue.pop();
-                        mnCurLoad -= msCurRequest.passengerNum;
-                        if (!mqueRequestQueue.empty())
-                        {
-                            msCurRequest = mqueRequestQueue.front();
-                            mnTargetFloor = msCurRequest.curFloor;
-                        }
-                        else
-                        {
-                            mnCurPickingState = STATE_STOPING;
-                            mnCurMovingState = MOVING_WAIT;
-                            break;
-                        }
+                       mnCurPickingState = STATE_GO_DEST;
+                       mnTargetFloor = msCurRequest.targetFloor;
+                       mnCurLoad += msCurRequest.passengerNum;
                     }
                     mnCurMovingState = ((mnTargetFloor - mnCurFloor) > 0 ? MOVING_UP : MOVING_DOWN);
                 }
@@ -118,10 +118,20 @@ public:
             break;
         }
     }
+
     void real_refresh_request()
     {
 
     }
+
+    void refresh_static_info()
+    {
+        if (mnCurPickingState == STATE_GO_DEST)
+            mnGoDestDuration++;
+        else if (mnCurPickingState == STATE_GO_PICK)
+            mnGoPickDuration++;
+    }
+
     QString generate_info_display()
     {
         QString _state;
@@ -131,7 +141,7 @@ public:
             _state = "DOWN";
         else
             _state = "WAIT";
-        QString _str = QString::number(mnCurLoad) + "/" + QString::number(mnMaxLoad) + " " + _state + " " + QString::number(mnTargetFloor);
+        QString _str = QString::number(mnCurFloor) + "F " + QString::number(mnCurLoad) + "/" + QString::number(mnMaxLoad) + " " + _state + " TO " + QString::number(mnTargetFloor) + "F";
         return _str;
     }
     //参数
@@ -144,6 +154,9 @@ public:
     int mnLastFloor;
     int mnCurMovingState;
     int mnCurPickingState;
+    //统计
+    int mnGoDestDuration;
+    int mnGoPickDuration;
 
     std::vector<int> mvecTargetFloor;
     int mnTargetFloor;

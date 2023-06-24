@@ -558,7 +558,7 @@
       <item row="1" column="2">
        <widget class="QLabel" name="ARC">
         <property name="text">
-         <string>0</string>
+         <string/>
         </property>
         <property name="alignment">
          <set>Qt::AlignCenter</set>
@@ -568,7 +568,7 @@
       <item row="1" column="0">
        <widget class="QLabel" name="AWD">
         <property name="text">
-         <string>0</string>
+         <string/>
         </property>
         <property name="alignment">
          <set>Qt::AlignCenter</set>
@@ -578,7 +578,7 @@
       <item row="1" column="1">
        <widget class="QLabel" name="ATD">
         <property name="text">
-         <string>0</string>
+         <string/>
         </property>
         <property name="alignment">
          <set>Qt::AlignCenter</set>

@@ -35,8 +35,8 @@ public:
     MCES(QWidget *parent = nullptr);
     ~MCES();
     bool initialize_simulate_graph();
-    void REAL_request_respond(int num);
-    void EASY_request_respond(int num);
+    void REAL_request_respond();
+    void EASY_request_respond();
 
     int easy_elevator_select(request _r, int excep = -1);
     int balanced_elevator_select(request _r, int excep = -1);
@@ -48,7 +48,9 @@ private:
     //界面用
     Ui::MCESClass ui;
     QTimer *mctrlBarTimer;
+    QTimer* mctrlCallTimer;
     QTimer* mctrlCountTimer;
+    QTimer* mctrlStaticTimer;
     int mnTimePassed;
     int mnTimerInterval;
 
@@ -67,7 +69,6 @@ private:
 
     //当前状态变量
     int* mpEachFloorWaitingPassengerNum;
-    int* mpEachFloorRequestStatus;
     queue<request> mqueRequestList;
 
 public slots:
@@ -76,7 +77,8 @@ public slots:
     void on_startSimulateButton_clicked();
     void on_pauseSimulateButton_clicked();
     void update_simulate_progress();
-    void updat_left_time_counter();
+    void update_left_time_counter();
+    void update_static_info();
     int simulate_passenger_request();
     void activate_elevators_move();
     void refresh_simulate_graph();
@@ -85,6 +87,8 @@ public slots:
     void on_maxHeight_textChanged();
     void on_cabinVolume_textChanged();
     void on_simulateDuration_textChanged();
+
+    void functions_call();
 };
 
 
