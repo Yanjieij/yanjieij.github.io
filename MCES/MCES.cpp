@@ -50,7 +50,6 @@ MCES::MCES(QWidget *parent)
 	mnTwoWayTargetFloor = 0;
 }
 
-
 MCES::~MCES()
 {
 	delete[] mpEachFloorWaitingPassengerNum;
@@ -71,7 +70,6 @@ void MCES::functions_call()
 	activate_elevators_move();
 	refresh_simulate_graph();
 }
-
 
 bool MCES::initialize_simulate_graph()
 {
@@ -108,15 +106,14 @@ bool MCES::initialize_simulate_graph()
 
 int MCES::simulate_passenger_request()
 {
-	int _exist = rand() % 12;
+	int _exist = rand() % 14;
 	if (_exist > 9)
 	{
 		return 0;
 	}
 	else
 	{
-		int _num = rand() % 2;
-		int _cnt = _num;
+		int _num = rand() % mnElevatorNum + 1;
 		while (_num > 0)
 		{
 			_num--;			
@@ -159,7 +156,7 @@ int MCES::simulate_passenger_request()
 			}
 			case POLICY_UPPEAK:
 			{
-				_from = rand() % (5 * mnMaxFloorHeight);
+				_from = rand() % (3 * mnMaxFloorHeight);
 				if (_from >= mnMaxFloorHeight)
 					_from = 0;
 				_to = rand() % mnMaxFloorHeight;
@@ -186,7 +183,7 @@ int MCES::simulate_passenger_request()
 				_to = rand() % (5 * mnMaxFloorHeight);
 				if (_to >= mnMaxFloorHeight)
 					_to = mnTwoWayTargetFloor;
-				_from = rand() % mnMaxFloorHeight;
+				_from = rand() % (mnMaxFloorHeight - 4) + 2;
 				while (_from == _to)
 				{
 					_from = rand() % mnMaxFloorHeight;
@@ -196,9 +193,9 @@ int MCES::simulate_passenger_request()
 			default:
 				break;
 			}
-			_r.passengerNum = (rand() % 5) + 1;
-			if(mnSimulateModel==EASY)
-				_r.passengerNum = (rand() % 10) + 1;
+			_r.passengerNum = rand() % (mnCabinVolume / 2) + 1;
+			if (mnSimulateModel == EASY)
+				_r.passengerNum = rand() % (mnCabinVolume - 2) + 1;
 			_r.curFloor = _from;
 			_r.targetFloor = _to;
 			if (_from > _to)
@@ -217,79 +214,8 @@ int MCES::simulate_passenger_request()
 	}
 }
 
+
 int MCES::balanced_elevator_select(request _r, int excep)
-{
-	return 0;
-}
-int MCES::uppeak_elevator_select(request _r, int excep)
-{
-	//所有电梯在执行完任务都回到一楼
-	if (_r.status == UP)
-	{
-		
-	}
-	return 0;
-}
-int MCES::downpeak_elevator_select(request _r, int excep)
-{
-	//所有电梯都到达顶层再开始向下运行
-	return 0;
-}
-int MCES::twoway_elevator_select(request _r, int excep)
-{
-	return 0;
-}
-
-
-void MCES::REAL_request_respond()
-{
-	//int cnt = 0;
-	while (!mqueRequestList.empty())
-	{
-		//cnt++;
-		auto cur_r = mqueRequestList.front();
-		int _elevatorSelected = -1;
-		switch (mnSimulatePolicy)
-		{
-		case POLICY_BALANCED:
-		{
-			_elevatorSelected = balanced_elevator_select(cur_r);
-			//if (!mvecElevatorVec[_elevatorSelected].access_request(cur_r))
-				//_elevatorSelected = balanced_elevator_select(cur_r, _elevatorSelected);
-			break;
-		}
-		case POLICY_UPPEAK:
-		{
-			_elevatorSelected = uppeak_elevator_select(cur_r);
-			//if (!mvecElevatorVec[_elevatorSelected].access_request(cur_r))
-				//_elevatorSelected = uppeak_elevator_select(cur_r, _elevatorSelected);
-			break;
-		}
-		case POLICY_DOWNPEAK:
-		{
-			_elevatorSelected = downpeak_elevator_select(cur_r);
-			//if (!mvecElevatorVec[_elevatorSelected].access_request(cur_r))
-				//_elevatorSelected = downpeak_elevator_select(cur_r, _elevatorSelected);
-			break;
-		}
-		case POLICY_TWOWAY:
-		{
-			_elevatorSelected = twoway_elevator_select(cur_r);
-			//if (!mvecElevatorVec[_elevatorSelected].access_request(cur_r))
-				//_elevatorSelected = twoway_elevator_select(cur_r, _elevatorSelected);
-			break;
-		}
-		default:
-			break;
-		}
-		mvecElevatorVec[_elevatorSelected].add_request(cur_r);
-
-		mqueRequestList.pop();
-	}
-	refresh_simulate_graph();
-}
-
-int MCES::easy_elevator_select(request _r, int excep)
 {
 	//找最近的电梯进行承载
 	int pickIndex = -1;
@@ -303,6 +229,13 @@ int MCES::easy_elevator_select(request _r, int excep)
 			{
 				_minDist = _dist;
 				pickIndex = i;
+			}
+		}
+		for (int i = 0; i < mnElevatorNum; i++)
+		{
+			if (mvecElevatorVec[i].mvecUnpickedRequestVector.size() == 0)
+			{
+				return i;
 			}
 		}
 	}
@@ -326,6 +259,74 @@ int MCES::easy_elevator_select(request _r, int excep)
 	}
 	return pickIndex;
 }
+
+
+void MCES::REAL_request_respond()
+{
+	//int cnt = 0;
+	while (!mqueRequestList.empty())
+	{
+		//cnt++;
+		auto cur_r = mqueRequestList.front();
+		int _elevatorSelected = -1;
+		switch (mnSimulatePolicy)
+		{
+		case POLICY_BALANCED:
+		{
+			_elevatorSelected = balanced_elevator_select(cur_r);
+			mvecElevatorVec[_elevatorSelected].add_request(cur_r);
+			break;
+		}
+		case POLICY_UPPEAK:
+		{
+			_elevatorSelected = rand() % mnElevatorNum;
+			for (int i = 0; i < mnElevatorNum; i++)
+			{
+				if (mvecElevatorVec[i].mvecUnpickedRequestVector.size() == 0)
+				{
+					_elevatorSelected = i;
+					break;
+				}
+			}
+			mvecElevatorVec[_elevatorSelected].add_request(cur_r);
+			break;
+		}
+		case POLICY_DOWNPEAK:
+		{
+			_elevatorSelected = rand() % mnElevatorNum;
+			for (int i = 0; i < mnElevatorNum; i++)
+			{
+				if (mvecElevatorVec[i].mvecUnpickedRequestVector.size() == 0)
+				{
+					_elevatorSelected = i;
+					break;
+				}
+			}
+			mvecElevatorVec[_elevatorSelected].add_request(cur_r);
+			break;
+		}
+		case POLICY_TWOWAY:
+		{
+			_elevatorSelected = rand() % mnElevatorNum;
+			for (int i = 0; i < mnElevatorNum; i++)
+			{
+				if (mvecElevatorVec[i].mvecUnpickedRequestVector.size() == 0)
+				{
+					_elevatorSelected = i;
+					break;
+				}
+			}
+			mvecElevatorVec[_elevatorSelected].add_request(cur_r);
+			break;
+		}
+		default:
+			break;
+		}
+		mqueRequestList.pop();
+	}
+	refresh_simulate_graph();
+}
+
 void MCES::EASY_request_respond()
 {
 	//int cnt = 0;
@@ -334,6 +335,14 @@ void MCES::EASY_request_respond()
 		//cnt++;
 		auto cur_r = mqueRequestList.front();
 		int _elevatorSelected = rand() % mnElevatorNum;
+		for (int i = 0; i < mnElevatorNum; i++)
+		{
+			if (mvecElevatorVec[i].mqueRequestQueue.empty())
+			{
+				_elevatorSelected = i;
+				break;
+			}
+		}
 		mvecElevatorVec[_elevatorSelected].add_request(cur_r);
 		mqueRequestList.pop();
 	}
@@ -353,8 +362,10 @@ void MCES::refresh_simulate_graph()
 {
 	for (int i = 0; i < mnElevatorNum; i++)
 	{
-		mpElevatorVerticalLayoutList[i][6].setText(QString::number(mvecElevatorVec[i].mqueRequestQueue.size()));
-		mpElevatorVerticalLayoutList[i][mnMaxFloorHeight-1].setText(QString::number(mvecElevatorVec[i].mnCurFloor));
+		if(mnSimulatePolicy == POLICY_EASY)
+			mpElevatorVerticalLayoutList[i][mnMaxFloorHeight-1].setText(QString::number(mvecElevatorVec[i].mqueRequestQueue.size()));
+		else 
+			mpElevatorVerticalLayoutList[i][mnMaxFloorHeight - 1].setText(QString::number(mvecElevatorVec[i].mvecUnpickedRequestVector.size()));
 		mpElevatorVerticalLayoutList[i][mvecElevatorVec[i].mnCurFloor].setText(mvecElevatorVec[i].generate_info_display());
 		mpElevatorVerticalLayoutList[i][mvecElevatorVec[i].mnCurFloor].setStyleSheet("border: 2px solid black;");
 		if (mvecElevatorVec[i].mnLastFloor == -1)
@@ -388,7 +399,6 @@ void MCES::on_policySelection_currentIndexChanged(const int index)
 		ui.policyDescribe->setText(
 			QStringLiteral("乘客集中前往某一楼层，一般用于开会、吃饭时间"));
 		srand((unsigned)time(NULL));
-		mnTwoWayTargetFloor = rand() % mnMaxFloorHeight;
 		mnSimulatePolicy = POLICY_TWOWAY;
 		break;
 	default:
@@ -440,6 +450,7 @@ void MCES::on_modelSelection_currentIndexChanged(const int index)
 			break;
 		}
 		mnSimulateModel = REAL;
+		mnSimulatePolicy = POLICY_BALANCED;
 	}
 }
 
@@ -468,6 +479,7 @@ void MCES::on_startSimulateButton_clicked()
 	_str += QString::number(_nTime % 60);
 	ui.leftTime->setText(_str);
 	ui.currentStatus->setText(QStringLiteral("正在运行"));
+	mnTwoWayTargetFloor = mnMaxFloorHeight / 2;
 
 	if (mvecElevatorVec.empty())
 	{
@@ -476,12 +488,21 @@ void MCES::on_startSimulateButton_clicked()
 		{
 			elevator _ele(mnCabinVolume, i);
 			_ele.mnCurPolicy = mnSimulatePolicy;
+			_ele.mnMaxFloor = mnMaxFloorHeight;
 			mvecElevatorVec.push_back(_ele);
 		}
 
 		initialize_simulate_graph();
 
 		mpEachFloorWaitingPassengerNum = new int[mnMaxFloorHeight];
+	}
+
+	if (mnSimulatePolicy == POLICY_UPPEAK)
+	{
+		for (int i = 0; i < mnElevatorNum; i++)
+		{
+			mvecElevatorVec[i].mnCurFloor = mnMaxFloorHeight - 1;
+		}
 	}
 
 	mctrlBarTimer->start();
@@ -532,12 +553,18 @@ void MCES::update_static_info()
 	int AWD = 0, ATD = 0;
 	int ARC = 0;
 	int cnt_move = 0;
+	int _vec_size = 0;
+
 	for (int i = 0; i < mnElevatorNum; i++)
 	{
 		mvecElevatorVec[i].refresh_static_info();
-		if (mvecElevatorVec[i].mnCurMovingState == STATE_STOPING)
+		if (mvecElevatorVec[i].mnCurMovingState == PICKING_STOPING)
 			continue;
-		AWD += mvecElevatorVec[i].mqueRequestQueue.size() * mvecElevatorVec[i].mnGoPickDuration;
+		if (mnSimulatePolicy == POLICY_EASY)
+			_vec_size = mvecElevatorVec[i].mqueRequestQueue.size();
+		else
+			_vec_size = mvecElevatorVec[i].mvecUnpickedRequestVector.size();
+		AWD += _vec_size * mvecElevatorVec[i].mnGoPickDuration;
 		ATD += mvecElevatorVec[i].mnGoDestDuration;
 		ARC += mvecElevatorVec[i].mnCurLoad;
 		cnt_move++;
@@ -553,7 +580,7 @@ void MCES::update_static_info()
 	float _arc = (float)mnSumARC / (float)(mnSumMovedElevatorNum * mnSumMovedElevatorNum);
 	ui.AWD->setText(QString::number(_awd));
 	ui.ATD->setText(QString::number(_atd));
-	ui.ARC->setText(QString::number(100*_arc) + "%");
+	ui.ARC->setText(QString::number(100.0 *_arc) + "%");
 }
 
 //参数更新

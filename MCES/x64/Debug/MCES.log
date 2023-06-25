@@ -1,4 +1,9 @@
-﻿  MCES.cpp
+﻿  uic MCES.ui
+  rcc MCES.qrc
+  moc MCES.h
+   RCC: Warning: No resources in 'C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\MCES\MCES.qrc'.
+  MCES.cpp
   main.cpp
+  qrc_MCES.cpp
   moc_MCES.cpp
   MCES.vcxproj -> C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\MCES\x64\Debug\MCES.exe

@@ -38,11 +38,7 @@ public:
     void REAL_request_respond();
     void EASY_request_respond();
 
-    int easy_elevator_select(request _r, int excep = -1);
     int balanced_elevator_select(request _r, int excep = -1);
-    int uppeak_elevator_select(request _r, int excep = -1);
-    int downpeak_elevator_select(request _r, int excep = -1);
-    int twoway_elevator_select(request _r, int excep = -1);
 
 private:
     //ΩÁ√Ê”√
