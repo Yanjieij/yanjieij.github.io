@@ -23,7 +23,7 @@ class elevator
 {
 public:
     elevator(int maxLoad, int index) :mnMaxLoad(maxLoad), mnCurLoad(0), mnIndex(index),
-        mnCurFloor(0), mnLastFloor(0), mnTargetFloor(0), mnCurPolicy(POLICY_EASY), mnGoDestDuration(0),
+        mnCurFloor(0), mnLastFloor(-1), mnTargetFloor(0), mnCurPolicy(POLICY_EASY), mnGoDestDuration(0),
         mnGoPickDuration(0)
     {
         mnCurMovingState = MOVING_WAIT;
@@ -141,7 +141,7 @@ public:
             _state = "DOWN";
         else
             _state = "WAIT";
-        QString _str = QString::number(mnCurFloor) + "F " + QString::number(mnCurLoad) + "/" + QString::number(mnMaxLoad) + " " + _state + " TO " + QString::number(mnTargetFloor) + "F";
+        QString _str = QString::number(mnCurFloor) + "F " + QString::number(mnCurLoad) + "/" + QString::number(mnMaxLoad) + " " + _state + " -> " + QString::number(mnTargetFloor) + "F";
         return _str;
     }
     //²ÎÊı

@@ -9,7 +9,4 @@ struct request
 	int curFloor = -1;
 	int targetFloor = -1;
 	bool status = UP;
-
-	int duration_wait = 0;
-	int duration_take = 0;
 };

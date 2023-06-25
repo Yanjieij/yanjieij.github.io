@@ -7,7 +7,7 @@ MCES::MCES(QWidget *parent)
 
 	//初始化工作
 	mnTimePassed = 0;
-	mnTimerInterval = 2000;	//1000ms
+	mnTimerInterval = 1000;	//1000ms
 
 	mctrlBarTimer = new QTimer(this);
 	mctrlBarTimer->setInterval(mnTimerInterval);
@@ -32,9 +32,12 @@ MCES::MCES(QWidget *parent)
 	ui.ARC->setText(QString::number(0));
 	ui.ATD->setText(QString::number(0));
 	ui.AWD->setText(QString::number(0));
+	mnSumARC = 0;
+	mnSumATD = 0;
+	mnSumAWD = 0;
+	mnSumMovedElevatorNum = 0;
 
 	mpVerticalLayoutList = nullptr;
-
 	mpEachFloorWaitingPassengerNum = nullptr;
 
 	//参数
@@ -45,7 +48,6 @@ MCES::MCES(QWidget *parent)
 	mnCabinVolume = 0;
 	mnSimulateDuration = 0;
 	mnTwoWayTargetFloor = 0;
-
 }
 
 
@@ -106,7 +108,7 @@ bool MCES::initialize_simulate_graph()
 
 int MCES::simulate_passenger_request()
 {
-	int _exist = rand() % 20;
+	int _exist = rand() % 12;
 	if (_exist > 9)
 	{
 		return 0;
@@ -196,7 +198,7 @@ int MCES::simulate_passenger_request()
 			}
 			_r.passengerNum = (rand() % 5) + 1;
 			if(mnSimulateModel==EASY)
-				_r.passengerNum = (rand() % 12) + 1;
+				_r.passengerNum = (rand() % 10) + 1;
 			_r.curFloor = _from;
 			_r.targetFloor = _to;
 			if (_from > _to)
@@ -210,7 +212,7 @@ int MCES::simulate_passenger_request()
 			REAL_request_respond(_num);
 		else if (mnSimulateModel == EASY)
 			EASY_request_respond(_num);
-			*/
+		*/
 		return _num;
 	}
 }
@@ -355,6 +357,8 @@ void MCES::refresh_simulate_graph()
 		mpElevatorVerticalLayoutList[i][mnMaxFloorHeight-1].setText(QString::number(mvecElevatorVec[i].mnCurFloor));
 		mpElevatorVerticalLayoutList[i][mvecElevatorVec[i].mnCurFloor].setText(mvecElevatorVec[i].generate_info_display());
 		mpElevatorVerticalLayoutList[i][mvecElevatorVec[i].mnCurFloor].setStyleSheet("border: 2px solid black;");
+		if (mvecElevatorVec[i].mnLastFloor == -1)
+			continue;
 		mpElevatorVerticalLayoutList[i][mvecElevatorVec[i].mnLastFloor].setText("");
 		mpElevatorVerticalLayoutList[i][mvecElevatorVec[i].mnLastFloor].setStyleSheet("border: 1px dashed black;");
 	}
@@ -525,21 +529,31 @@ void MCES::update_left_time_counter()
 
 void MCES::update_static_info()
 {
-	int AWD = 0, ATD = 0, ARC = 0;
+	int AWD = 0, ATD = 0;
+	int ARC = 0;
+	int cnt_move = 0;
 	for (int i = 0; i < mnElevatorNum; i++)
 	{
 		mvecElevatorVec[i].refresh_static_info();
-		AWD += mvecElevatorVec[i].mnGoPickDuration;
+		if (mvecElevatorVec[i].mnCurMovingState == STATE_STOPING)
+			continue;
+		AWD += mvecElevatorVec[i].mqueRequestQueue.size() * mvecElevatorVec[i].mnGoPickDuration;
 		ATD += mvecElevatorVec[i].mnGoDestDuration;
 		ARC += mvecElevatorVec[i].mnCurLoad;
+		cnt_move++;
 	}
-	ARC *= 100;
-	AWD /= mnElevatorNum;
-	ATD /= mnElevatorNum;
-	ARC /= 100 * mnCabinVolume * mnElevatorNum;
-	ui.AWD->setText(QString::number(AWD));
-	ui.ATD->setText(QString::number(ATD));
-	ui.ARC->setText(QString::number(ARC) + "%");
+	if (cnt_move == 0)
+		return;
+	mnSumMovedElevatorNum += cnt_move;
+	mnSumATD += ATD;
+	mnSumAWD += AWD;
+	mnSumARC += ARC;
+	float _awd = (float)mnSumAWD / (float)mnSumMovedElevatorNum;
+	float _atd = (float)mnSumATD / (float)mnSumMovedElevatorNum;
+	float _arc = (float)mnSumARC / (float)(mnSumMovedElevatorNum * mnSumMovedElevatorNum);
+	ui.AWD->setText(QString::number(_awd));
+	ui.ATD->setText(QString::number(_atd));
+	ui.ARC->setText(QString::number(100*_arc) + "%");
 }
 
 //参数更新

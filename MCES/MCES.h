@@ -71,6 +71,12 @@ private:
     int* mpEachFloorWaitingPassengerNum;
     queue<request> mqueRequestList;
 
+    //Õ≥º∆”√
+    int mnSumAWD;
+    int mnSumATD;
+    int mnSumARC;
+    int mnSumMovedElevatorNum;
+
 public slots:
     void on_policySelection_currentIndexChanged(const int index);
     void on_modelSelection_currentIndexChanged(const int index);
