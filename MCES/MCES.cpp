@@ -362,10 +362,12 @@ void MCES::refresh_simulate_graph()
 {
 	for (int i = 0; i < mnElevatorNum; i++)
 	{
+		/*
 		if(mnSimulatePolicy == POLICY_EASY)
 			mpElevatorVerticalLayoutList[i][mnMaxFloorHeight-1].setText(QString::number(mvecElevatorVec[i].mqueRequestQueue.size()));
 		else 
 			mpElevatorVerticalLayoutList[i][mnMaxFloorHeight - 1].setText(QString::number(mvecElevatorVec[i].mvecUnpickedRequestVector.size()));
+		*/
 		mpElevatorVerticalLayoutList[i][mvecElevatorVec[i].mnCurFloor].setText(mvecElevatorVec[i].generate_info_display());
 		mpElevatorVerticalLayoutList[i][mvecElevatorVec[i].mnCurFloor].setStyleSheet("border: 2px solid black;");
 		if (mvecElevatorVec[i].mnLastFloor == -1)

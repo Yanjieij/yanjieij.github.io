@@ -1,7 +1,4 @@
-﻿  uic MCES.ui
-  rcc MCES.qrc
-  moc MCES.h
-   RCC: Warning: No resources in 'C:\Users\Yanjieij\Documents\GitHub\yanjieij.github.io\MCES\MCES.qrc'.
+﻿  Reading Qt configuration (C:/Qt/5.15.2/msvc2019_64/bin/qmake)
   MCES.cpp
   main.cpp
   qrc_MCES.cpp
