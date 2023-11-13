@@ -1,4 +1,3 @@
 # This-> Blog by Yanjieij
-## My branches for
-### c++-blog&emsp;->&emsp;my studying blog of cpp  
+## My branches for 
 ### storehouse&emsp;->&emsp;storing all my history code by time  
